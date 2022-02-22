@@ -1,2 +1,8 @@
-# Mercury_Game
-This is the code repository for Mercury project.
+# Mercury Game
+
+Built with Unity Engine.
+
+## Packages:
+
+• PUN2
+• Character Creator 2D
