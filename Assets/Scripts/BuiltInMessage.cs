@@ -5,7 +5,6 @@ public class CluesManager
 {
     #region Private Members
     private List<Clue> clues;
-    private bool firstMessage;
     #endregion
 
     #region Constructor
@@ -14,22 +13,25 @@ public class CluesManager
         clues = new List<Clue>();
         clues.Add(new Clue("Hello", "", ""));
         clues.Add(new Clue("Have a nice day", "", ""));
-
-        firstMessage = true;
     }
     #endregion
 
     #region Public Methods
+
+    public void startCluesMechanism(string name, int clueID)
+    {
+        clues.Clear();
+
+        clues.Add(new Clue("I suspect ...", "", name));
+        clues.Add(new Clue("I trust ...", "", name));
+    }
+
     public void AddMessage(string message, string history, string name)
     {
-        if (history == "")
-            return;
-
-        if(firstMessage == true)
+        foreach(Clue clue in clues)
         {
-            firstMessage = false;
-
-            clues.Clear();
+            if (clue.GetMessage() == message)
+                return;
         }
 
         clues.Add(new Clue(message, history, name));
@@ -50,6 +52,7 @@ public class CluesManager
 public class BuiltInMessage
 {
     private string message;
+    protected int score;
 
     public BuiltInMessage(string _message)
     {
@@ -65,6 +68,7 @@ public class BuiltInMessage
 public class Clue : BuiltInMessage
 {
     private string messageHistory;
+    private string clueType;
 
     public Clue(string message, string history, string name) : base(message)
     {
@@ -79,5 +83,10 @@ public class Clue : BuiltInMessage
     public string GetHistory()
     {
         return messageHistory;
+    }
+
+    public string GetClueType()
+    {
+        return clueType;
     }
 }
