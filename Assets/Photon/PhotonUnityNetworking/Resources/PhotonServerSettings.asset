@@ -40,6 +40,12 @@ MonoBehaviour:
   - Fire
   - RespawnSpaceship
   - ChatMessage
+  - PlayerJoinedRoom
+  - PlayerLeftRoom
+  - NewTarget
+  - AddTarget
+  - UpdateTargetsList
+  - NewTargetsList
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

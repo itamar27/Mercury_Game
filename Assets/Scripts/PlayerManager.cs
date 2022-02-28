@@ -1,12 +1,8 @@
 using Photon.Pun;
-using Photon.Pun.Demo.PunBasics;
-using Photon.Realtime;
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
-using UnityEngine.UI;
 
-public class PlayerManager : MonoBehaviourPun
+public class PlayerManager : MonoBehaviourPun, IComparable
 {
     #region Serialze Fields
 
@@ -40,6 +36,18 @@ public class PlayerManager : MonoBehaviourPun
 
     #endregion
 
+    #region Delegates
+
+    /*
+    public delegate void JoinedRoom(PlayerManager playerManager);
+    public static JoinedRoom joinedRoomDelegate;
+
+    public delegate void LeftRoom(PlayerManager playerManager);
+    public static LeftRoom leftRoomDelegate;
+    */
+
+    #endregion
+
     #region MonoBehaviour
 
     private void Awake()
@@ -60,6 +68,8 @@ public class PlayerManager : MonoBehaviourPun
 
     private void Start()
     {
+        //JoinedRoomEvent();
+        
         GetName();
 
         localXScale = transform.localScale.x;
@@ -97,7 +107,7 @@ public class PlayerManager : MonoBehaviourPun
     {
         string from = PlayerManager.LocalPlayerManager.playerName;
         this.photonView.RPC("ChatMessage", RpcTarget.Others, from, clue.GetHistory(), this.playerName, clue.GetMessage());
-        Chat.Instance.SendMessageToChat(from + ": " + clue.GetMessage());
+        Chat.Instance.SendMessageToChat(string.Format("<color=blue>To " + this.playerName + ":</color> " + clue.GetMessage()));
     }
 
     #endregion
@@ -109,7 +119,7 @@ public class PlayerManager : MonoBehaviourPun
     { 
         if(to == LocalPlayerManager.playerName)
         {
-            Chat.Instance.SendMessageToChat(from + ": " + message);
+            Chat.Instance.SendMessageToChat(string.Format("<color=red>" + from + ":</color> " + message));
 
             PlayerManager.cluesManager.AddMessage(message, histrory, to);
         }
@@ -123,6 +133,17 @@ public class PlayerManager : MonoBehaviourPun
     {
         SendMessage(PlayerManager.cluesManager.GetClueAt(clueIndex));
         messagesBox.SetActive(false);
+    }
+
+    public int CompareTo(object obj)
+    {
+        var a = this;
+        var b = obj as PlayerManager;
+
+        if (a.photonView.ViewID < b.photonView.ViewID)
+            return -1;
+        else
+            return 1;
     }
 
     #endregion

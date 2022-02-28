@@ -8,6 +8,13 @@ public class MessageClicked : MonoBehaviour
 
     private void OnMouseDown()
     {
-        GetComponentInParent<PlayerManager>().onMessageClicked(index);
+        try
+        {
+            GetComponentInParent<PlayerManager>().onMessageClicked(index);
+        }
+        catch
+        {
+            GetComponentInParent<AgentManager>().onMessageClicked(index);
+        }
     }
 }

@@ -21,6 +21,16 @@ namespace Com.Mercury.Game
 
         #endregion
 
+        #region Delegates
+
+        public delegate void PlayerJoinedRoom();
+        public static PlayerJoinedRoom playerJoinedRoomDelegate;
+        
+        public delegate void PlayerLeftRoom();
+        public static PlayerLeftRoom playerLeftRoomDelegate;
+
+        #endregion
+
         #region Singleton
 
         private static GameManager instance;
@@ -46,6 +56,10 @@ namespace Com.Mercury.Game
 
         private void Start()
         {
+            if (PhotonNetwork.IsMasterClient)
+            {
+                PhotonNetwork.InstantiateRoomObject("Agent", new Vector3(0, 0, -1.1f), Quaternion.identity, 0);
+            }
             if (playerPrefab == null)
             {
                 Debug.LogError("<Color=Red><a>Missing</a></Color> playerPrefab Reference. Please set it up in GameObject 'Game Manager'", this);
@@ -78,12 +92,12 @@ namespace Com.Mercury.Game
 
         public override void OnPlayerEnteredRoom(Player other)
         {
-            Debug.LogFormat("OnPlayerEnteredRoom() {0}", other.NickName); // not seen if you're the player connecting
+            StartCoroutine(PlayerJoinedRoomEvent());
         }
 
         public override void OnPlayerLeftRoom(Player other)
         {
-            Debug.LogFormat("OnPlayerLeftRoom() {0}", other.NickName); // seen when other disconnects
+            StartCoroutine(PlayerLeftRoomEvent());
         }
 
         #endregion
@@ -96,19 +110,25 @@ namespace Com.Mercury.Game
             PhotonNetwork.LeaveRoom();
         }
 
-
         #endregion
 
         #region Private Methods
 
         void LoadLevel()
         {
-            if (!PhotonNetwork.IsMasterClient)
-            {
-                Debug.LogError("PhotonNetwork : Trying to Load a level but we are not the master Client");
-            }
-            Debug.LogFormat("PhotonNetwork : Loading Level : {0}", PhotonNetwork.CurrentRoom.PlayerCount);
             PhotonNetwork.LoadLevel("GameRoom_Main");
+        }
+
+        private IEnumerator PlayerJoinedRoomEvent()
+        {
+            yield return new WaitForSeconds(1);
+            playerJoinedRoomDelegate();
+        }
+
+        private IEnumerator PlayerLeftRoomEvent()
+        {
+            yield return new WaitForSeconds(1);
+            playerLeftRoomDelegate();
         }
 
         #endregion
