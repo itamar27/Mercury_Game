@@ -1,5 +1,6 @@
 using Photon.Pun;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerManager : MonoBehaviourPun, IComparable
@@ -36,23 +37,10 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
     #endregion
 
-    #region Delegates
-
-    /*
-    public delegate void JoinedRoom(PlayerManager playerManager);
-    public static JoinedRoom joinedRoomDelegate;
-
-    public delegate void LeftRoom(PlayerManager playerManager);
-    public static LeftRoom leftRoomDelegate;
-    */
-
-    #endregion
-
     #region MonoBehaviour
 
     private void Awake()
     {
-        // #Important
         // used in GameManager.cs: we keep track of the localPlayer instance to prevent instantiation when levels are synchronized
         if (photonView.IsMine)
         {
@@ -90,13 +78,32 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
     private void FixedUpdate()
     {
-        nameDirection();
-        messageBoxDirection();
 
         if (photonView.IsMine == false && PhotonNetwork.IsConnected == true)
             return;
 
-        Move(x * Time.deltaTime, y * Time.deltaTime);
+        if(Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Day)
+        {
+            nameDirection();
+            messageBoxDirection();
+
+            Move(x * Time.deltaTime, y * Time.deltaTime);
+        }
+        else if (Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Vote)
+        {
+            // Get Vote
+        }
+        else
+        {
+            if(Globals.LocalPlayerInfo.role == "Venom")
+            {
+                // Venoms night
+            }
+            else
+            {
+                // Citizens night
+            }
+        }
     }
 
     #endregion
@@ -108,6 +115,13 @@ public class PlayerManager : MonoBehaviourPun, IComparable
         string from = PlayerManager.LocalPlayerManager.playerName;
         this.photonView.RPC("ChatMessage", RpcTarget.Others, from, clue.GetHistory(), this.playerName, clue.GetMessage());
         Chat.Instance.SendMessageToChat(string.Format("<color=blue>To " + this.playerName + ":</color> " + clue.GetMessage()));
+
+        var dict = new Dictionary<string, string>();
+        dict.Add("source", from);
+        dict.Add("target", this.playerName);
+        dict.Add("score", "0");
+        dict.Add("message", clue.GetMessage());
+        HttpService.Instance.Post("/api/research/interaction", dict);
     }
 
     #endregion
@@ -125,14 +139,25 @@ public class PlayerManager : MonoBehaviourPun, IComparable
         }
     }
 
+    [PunRPC]
+    void OnPlayerVoted(string votedTo)
+    {
+        VotesPanelManager.Instance.AddVote(votedTo);
+    }
+
     #endregion
 
     #region Public Methods
 
-    public void onMessageClicked(int clueIndex) // Need to be caught from event
+    public void onMessageClicked(int clueIndex)
     {
         SendMessage(PlayerManager.cluesManager.GetClueAt(clueIndex));
         messagesBox.SetActive(false);
+    }
+
+    public void onVoteClicked(string playerName)
+    {
+        this.photonView.RPC("OnPlayerVoted", RpcTarget.Others, playerName);
     }
 
     public int CompareTo(object obj)
@@ -225,6 +250,7 @@ public class PlayerManager : MonoBehaviourPun, IComparable
             playerName = "" + System.Convert.ToChar(64 + counter) + System.Convert.ToChar(toConvert - 26);
         }
         txtName.text = playerName;
+        Globals.LocalPlayerInfo.name = playerName;
     }
 
     private void OnMouseDown()
@@ -242,5 +268,4 @@ public class PlayerManager : MonoBehaviourPun, IComparable
     }
 
     #endregion
-
 }
