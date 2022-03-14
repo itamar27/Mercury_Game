@@ -87,27 +87,34 @@ public class AgentManager : MonoBehaviourPun
 
     private void FixedUpdate()
     {
-        nameDirection();
-        messageBoxDirection();
-        try
+        if (Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Day)
         {
-            if (currTargetIndex >= 0 && currTargetIndex < targets.Count)
+            nameDirection();
+            messageBoxDirection();
+            try
             {
-                if (transform.position.x > targets[currTargetIndex].transform.position.x)
-                    x = -1;
-                else
-                    x = 1;
+                if (currTargetIndex >= 0 && currTargetIndex < targets.Count)
+                {
+                    if (transform.position.x > targets[currTargetIndex].transform.position.x)
+                        x = -1;
+                    else
+                        x = 1;
+                }
+            }
+            catch
+            {
+                UpdateTargets();
+                getNewTarget = true;
+            }
+
+            if (PhotonNetwork.IsMasterClient)
+            {
+                Move();
             }
         }
-        catch
+        else if (Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Vote)
         {
-            UpdateTargets();
-            getNewTarget = true;
-        }
-
-        if(PhotonNetwork.IsMasterClient)
-        {
-            Move();
+            //Wait and vote
         }
     }
 

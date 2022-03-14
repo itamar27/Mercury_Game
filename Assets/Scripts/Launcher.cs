@@ -1,6 +1,9 @@
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
+using System.Collections;
+using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace Com.Mercury.Game
 {
@@ -10,7 +13,9 @@ namespace Com.Mercury.Game
 
         [Tooltip("The maximum number of players per room. When a room is full, it can't be joined by new players, and so new room will be created")]
         [SerializeField] private byte maxPlayersPerRoom = 4;
-
+        [SerializeField] private InputField emailInput;
+        [SerializeField] private InputField roomKeyInput;
+        [SerializeField] private Text statusText;
         #endregion
 
         #region Private Fields
@@ -31,7 +36,6 @@ namespace Com.Mercury.Game
 
         #region MonoBehaviour CallBacks
 
-
         /// <summary>
         /// MonoBehaviour method called on GameObject by Unity during early initialization phase.
         /// </summary>
@@ -42,6 +46,10 @@ namespace Com.Mercury.Game
             PhotonNetwork.AutomaticallySyncScene = true;
         }
 
+        private void Start()
+        {
+
+        }
         #endregion
 
         #region MonoBehaviourPunCallbacks Callbacks
@@ -54,7 +62,7 @@ namespace Com.Mercury.Game
             if (isConnecting)
             {
                 // #Critical: The first we try to do is to join a potential existing room. If there is, good, else, we'll be called back with OnJoinRandomFailed()
-                PhotonNetwork.JoinRandomRoom();
+                PhotonNetwork.JoinRoom(Globals.GameConfig.roomKey);
                 isConnecting = false;
             }
         }
@@ -62,13 +70,18 @@ namespace Com.Mercury.Game
         public override void OnDisconnected(DisconnectCause cause)
         {
             isConnecting = false;
-            Debug.LogWarningFormat("PUN Basics Tutorial/Launcher: OnDisconnected() was called by PUN with reason {0}", cause);
         }
 
-        public override void OnJoinRandomFailed(short returnCode, string message)
+        public override void OnJoinRoomFailed(short returnCode, string message)
         {
-            // #Critical: we failed to join a random room, maybe none exists or they are all full. No worries, we create a new room.
-            PhotonNetwork.CreateRoom(null, new RoomOptions { MaxPlayers = maxPlayersPerRoom });
+            maxPlayersPerRoom = System.Convert.ToByte(Globals.GameConfig.maxPlayers);
+
+            PhotonNetwork.CreateRoom(Globals.GameConfig.roomKey, new RoomOptions { MaxPlayers = maxPlayersPerRoom });
+        }
+
+        public override void OnCreateRoomFailed(short returnCode, string message)
+        {
+            statusText.text = string.Format("<color=red>Game already started...</color>");
         }
 
         public override void OnJoinedRoom()
@@ -76,9 +89,7 @@ namespace Com.Mercury.Game
             // #Critical: We only load if we are the first player, else we rely on `PhotonNetwork.AutomaticallySyncScene` to sync our instance scene.
             if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
             {
-                // #Critical
-                // Load the Room Level.
-                PhotonNetwork.LoadLevel("GameRoom_Main");
+                PhotonNetwork.LoadLevel("WaitingRoom");
             }
         }
 
@@ -86,23 +97,65 @@ namespace Com.Mercury.Game
 
         #region Public Methods
 
+        public void ExitGame()
+        {
+            Application.Quit();
+        }
 
+        public void Connect()
+        {
+            StartCoroutine(tryToConnect());
+        }
         /// <summary>
         /// Start the connection process.
         /// - If already connected, we attempt joining a random room
         /// - if not yet connected, Connect this application instance to Photon Cloud Network
         /// </summary>
-        public void Connect()
+        public IEnumerator tryToConnect()
         {
+            HttpService.Instance.result = "";
+            HttpService.Instance.Get("GameConfig/" + emailInput.text);
+            yield return new WaitUntil(() => HttpService.Instance.result != "");
+            var parsed = HttpService.Instance.GetParsedResult();
+
+            if(parsed == null)
+            {
+                if (emailInput.text == "" || roomKeyInput.text == "")
+                {
+                    statusText.text = string.Format("<color=red>Enter your details</color>");
+                    yield break;
+                }
+                else if (HttpService.Instance.result == "null")
+                    statusText.text = string.Format("<color=red>Bad parameters</color>");
+                else
+                    statusText.text = string.Format("<color=red>{0}</color>", HttpService.Instance.result);
+                yield break;
+            }
+
+            statusText.text = "Connecting...";
+            StoreGameConfig(parsed);
+
             if (PhotonNetwork.IsConnected)
             {
-                PhotonNetwork.JoinRandomRoom();
+                PhotonNetwork.JoinRoom(Globals.GameConfig.roomKey);
             }
             else
             {
                 isConnecting = PhotonNetwork.ConnectUsingSettings();
                 PhotonNetwork.GameVersion = gameVersion;
             }
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void StoreGameConfig(Dictionary<string, object> gameConfig)
+        {
+            Globals.GameConfig.email = emailInput.text.Trim();
+            Globals.GameConfig.roomKey = roomKeyInput.text.Trim();
+            Globals.GameConfig.maxPlayers = System.Convert.ToInt32(gameConfig["maxPlayers"]);
+            Globals.GameConfig.agentsBehaviour = Globals.AgentBehaviour.Active;
         }
 
         #endregion

@@ -1,0 +1,1 @@
+https://mercury-48cab-default-rtdb.europe-west1.firebasedatabase.app/
