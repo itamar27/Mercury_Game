@@ -564,6 +564,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ButtonUI
       objectReference: {fileID: 0}
+    - target: {fileID: 3651224142264351291, guid: d7af427c11b4e3f4eb65f9664a4d4c0d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3651224142444528373, guid: d7af427c11b4e3f4eb65f9664a4d4c0d, type: 3}
       propertyPath: m_Text
       value: Leave

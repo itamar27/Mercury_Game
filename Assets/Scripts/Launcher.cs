@@ -4,6 +4,7 @@ using Photon.Realtime;
 using System.Collections;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System;
 
 namespace Com.Mercury.Game
 {
@@ -16,6 +17,7 @@ namespace Com.Mercury.Game
         [SerializeField] private InputField emailInput;
         [SerializeField] private InputField roomKeyInput;
         [SerializeField] private Text statusText;
+
         #endregion
 
         #region Private Fields
@@ -41,6 +43,7 @@ namespace Com.Mercury.Game
         /// </summary>
         void Awake()
         {
+            Globals.gameRound = 0;
             // #Critical
             // this makes sure we can use PhotonNetwork.LoadLevel() on the master client and all clients in the same room sync their level automatically
             PhotonNetwork.AutomaticallySyncScene = true;
@@ -75,7 +78,6 @@ namespace Com.Mercury.Game
         public override void OnJoinRoomFailed(short returnCode, string message)
         {
             maxPlayersPerRoom = System.Convert.ToByte(Globals.GameConfig.maxPlayers);
-
             PhotonNetwork.CreateRoom(Globals.GameConfig.roomKey, new RoomOptions { MaxPlayers = maxPlayersPerRoom });
         }
 
@@ -113,26 +115,44 @@ namespace Com.Mercury.Game
         /// </summary>
         public IEnumerator tryToConnect()
         {
+            statusText.text = "Connecting...";
+
             HttpService.Instance.result = "";
-            HttpService.Instance.Get("GameConfig/" + emailInput.text);
+            Dictionary<string, string> queryParams = new Dictionary<string, string>();
+            queryParams.Add("email", emailInput.text);
+            HttpService.Instance.Get("game/player", queryParams);
             yield return new WaitUntil(() => HttpService.Instance.result != "");
             var parsed = HttpService.Instance.GetParsedResult();
-
             if(parsed == null)
             {
-                if (emailInput.text == "" || roomKeyInput.text == "")
+                if (emailInput.text == "")
                 {
-                    statusText.text = string.Format("<color=red>Enter your details</color>");
+                    statusText.text = string.Format("<color=red>Enter your email</color>");
                     yield break;
                 }
-                else if (HttpService.Instance.result == "null")
-                    statusText.text = string.Format("<color=red>Bad parameters</color>");
                 else
-                    statusText.text = string.Format("<color=red>{0}</color>", HttpService.Instance.result);
+                    statusText.text = string.Format("<color=red>Email not valid</color>", HttpService.Instance.result);
                 yield break;
             }
+            StorePlayerProfile(parsed);
 
-            statusText.text = "Connecting...";
+            HttpService.Instance.result = "";
+            queryParams = new Dictionary<string, string>();
+            queryParams.Add("configuration", roomKeyInput.text);
+            HttpService.Instance.Get("game/configuration", queryParams);
+            yield return new WaitUntil(() => HttpService.Instance.result != "");
+            parsed = HttpService.Instance.GetParsedResult();
+            if (parsed == null)
+            {
+                if (roomKeyInput.text == "")
+                {
+                    statusText.text = string.Format("<color=red>Enter room key</color>");
+                    yield break;
+                }
+                else
+                    statusText.text = string.Format("<color=red>Room key not valid</color>", HttpService.Instance.result);
+                yield break;
+            }
             StoreGameConfig(parsed);
 
             if (PhotonNetwork.IsConnected)
@@ -150,12 +170,18 @@ namespace Com.Mercury.Game
 
         #region Private Methods
 
+        private void StorePlayerProfile(Dictionary<string, object> playerProfile)
+        {
+            Globals.PlayerProfile.id = Convert.ToInt32(playerProfile["id"]);
+            Globals.GameConfig.email = emailInput.text.Trim();
+        }
+
         private void StoreGameConfig(Dictionary<string, object> gameConfig)
         {
-            Globals.GameConfig.email = emailInput.text.Trim();
             Globals.GameConfig.roomKey = roomKeyInput.text.Trim();
-            Globals.GameConfig.maxPlayers = System.Convert.ToInt32(gameConfig["maxPlayers"]);
-            Globals.GameConfig.agentsBehaviour = Globals.AgentBehaviour.Active;
+            Globals.GameConfig.startTime = Convert.ToString(gameConfig["start_time"]);
+            Globals.GameConfig.agentsBehaviour = (Globals.AgentBehaviour)Convert.ToInt32(gameConfig["agents_behaviors"]);
+            Globals.GameConfig.researchId = Convert.ToInt32(gameConfig["research"]);
         }
 
         #endregion

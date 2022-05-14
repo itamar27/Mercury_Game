@@ -41,9 +41,9 @@ public class GameTimer : MonoBehaviourPunCallbacks
 
     private void Awake()
     {
-        dayTime = 10;
+        dayTime = 30;
         voteTime = 30;
-        nightTime = 10;
+        nightTime = 30;
         CustomeValue = new ExitGames.Client.Photon.Hashtable();
 
         if (PhotonNetwork.IsMasterClient)
@@ -55,7 +55,7 @@ public class GameTimer : MonoBehaviourPunCallbacks
         }
     }
 
-void Start()
+    void Start()
     {
         if (PhotonNetwork.IsMasterClient == false)
         {
@@ -94,7 +94,7 @@ void Start()
                     CustomeValue["StartTime"] = startTime;
                 }
 
-                if(CustomeValue.ContainsKey("NextAct") == false)
+                if (CustomeValue.ContainsKey("NextAct") == false)
                 {
                     CustomeValue.Add("NextAct", true);
                 }
@@ -165,5 +165,4 @@ void Start()
 
     #endregion
 
-    
 }

@@ -32,13 +32,9 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
 
     private void Awake()
     {
+        Globals.gameRound++;
         PhotonNetwork.AutomaticallySyncScene = true;
         readyToLoadScene = true;
-    }
-
-    void Start()
-    {
-        loadingCanvas.enabled = false;
         CustomeValue = new ExitGames.Client.Photon.Hashtable();
         if (PhotonNetwork.IsMasterClient)
         {
@@ -46,10 +42,14 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
             CustomeValue.Add("StartTime", startTime);
             PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
         }
-        else
-        {
+    }
+
+    void Start()
+    {
+        loadingCanvas.enabled = false;
+
+        if (PhotonNetwork.IsMasterClient == false)
             startTime = double.Parse(PhotonNetwork.CurrentRoom.CustomProperties["StartTime"].ToString());
-        }
     }
 
     private void Update()
@@ -67,6 +67,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
                 {
                     PhotonNetwork.CurrentRoom.IsOpen = false;
                     PhotonNetwork.CurrentRoom.IsVisible = false;
+                    PickPlayersAppearance();
                     PickVenoms();
                     StartCoroutine(SwitchToGameRoom());
                 }
@@ -75,7 +76,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
             try
             {
                 int localActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
-
+                
                 int venom1 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["Venom1"].ToString());
                 int venom2 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["Venom2"].ToString());
                 int venom3 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["Venom3"].ToString());
@@ -88,14 +89,34 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
                 {
                     Globals.LocalPlayerInfo.role = "Citizen";
                 }
+
+                Globals.Results.venoms.Add(venom1);
+                Globals.Results.venoms.Add(venom2);
+                Globals.Results.venoms.Add(venom3);
             }
-            catch(Exception exc) {}
+            catch { }
+
+            try
+            {
+                int localActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
+                int appearId = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["appear" + localActorNumber].ToString());
+                Globals.LocalPlayerInfo.appearanceId = appearId;
+
+                int botAppear1 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["botAppear" + 1].ToString());
+                int botAppear2 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["botAppear" + 2].ToString());
+                int botAppear3 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["botAppear" + 3].ToString());
+                
+                Globals.GameConfig.botAppearId1 = botAppear1;
+                Globals.GameConfig.botAppearId2 = botAppear2;
+                Globals.GameConfig.botAppearId3 = botAppear3;
+            }
+            catch { }
         }
     }
 
     private IEnumerator SwitchToGameRoom()
     {
-        yield return new WaitForSeconds(3);
+        yield return new WaitForSeconds(5);
         PhotonNetwork.AutomaticallySyncScene = true;
         PhotonNetwork.LoadLevel("GameRoomMain");
     }
@@ -129,17 +150,47 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
 
     #region Private Methods
 
+    private void PickPlayersAppearance()
+    {
+        var players = PhotonNetwork.CurrentRoom.Players;
+        List<int> appearances = new List<int>();
+        for (int i = 1; i < 18; i++)
+        {
+            appearances.Add(i);
+        }
+
+        for (int i = 1; i < players.Count + 1; i++)
+        {
+            if (CustomeValue.ContainsKey("appear" + i) == false)
+            {
+                int selectedAppear = UnityEngine.Random.Range(0, appearances.Count);
+                CustomeValue.Add("appear" + i, appearances[selectedAppear]);
+                appearances.RemoveAt(selectedAppear);
+            }
+        }
+
+        for (int i = 1; i < 4; i++)
+        {
+            if (CustomeValue.ContainsKey("botAppear" + i) == false)
+            {
+                int selectedAppear = UnityEngine.Random.Range(0, appearances.Count);
+                CustomeValue.Add("botAppear" + i, appearances[selectedAppear]);
+                appearances.RemoveAt(selectedAppear);
+            }
+        }
+    }
+
     private void PickVenoms()
     {
         var players = PhotonNetwork.CurrentRoom.Players;
         int venomsNumber = 0;
         List<int> venomsList = new List<int>();
 
-        if(players.Count > 20)
+        if (players.Count > 16)
         {
             venomsNumber = 3;
         }
-        else if(players.Count > 10)
+        else if (players.Count > 8)
         {
             venomsNumber = 2;
         }
@@ -155,7 +206,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
             {
                 int newVenomIndex = UnityEngine.Random.Range(1, players.Count + 1);
 
-                if (venomsList.Contains(newVenomIndex))
+                if (venomsList.Contains(newVenomIndex) || Globals.Results.venoms.Contains(newVenomIndex))
                     break;
                 else
                     venomsList.Add(newVenomIndex);
@@ -165,7 +216,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
         if (CustomeValue.ContainsKey("Venom1") == false)
         {
             CustomeValue.Add("Venom1", venomsList[0]);
-        }        
+        }
         if (CustomeValue.ContainsKey("Venom2") == false)
         {
             if (venomsNumber > 1)

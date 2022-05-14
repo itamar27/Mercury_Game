@@ -1,14 +1,17 @@
+using Newtonsoft.Json;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public class HttpService : MonoBehaviour
 {
-    protected string targetUrl = "https://mercury-48cab-default-rtdb.europe-west1.firebasedatabase.app/";
+    //protected string targetUrl = "https://mercury-48cab-default-rtdb.europe-west1.firebasedatabase.app/";
+    protected string targetUrl = "http://localhost:8000/api/";
     public string result = "";
-
 
     #region Singleton
     private static HttpService instance;
@@ -30,33 +33,20 @@ public class HttpService : MonoBehaviour
     private void Awake()
     {
         instance = this;
-        /*
-         * The code below is only for Alpha purposes,
-         * reading the target url for http requests from local file.
-         * File path: Needs to be in the Execution file folder.
-         */
-        StreamReader reader = new StreamReader("./target_url.txt");
-        targetUrl = reader.ReadToEnd().Trim();
-        reader.Close();
     }
 
     #endregion
 
     #region Http Requests
 
-    public void Post(string title, Dictionary<string, string> data) => StartCoroutine(PostCorutine(title, data));
-    private IEnumerator PostCorutine(string title, Dictionary<string, string> data)
+    public void Post(string title, Dictionary<string, object> data) => StartCoroutine(PostCorutine(title, data));
+    private IEnumerator PostCorutine(string title, Dictionary<string, object> data)
     {
-        string jsonString = "{";
-        foreach (var item in data)
-        {
-            jsonString += "\"" + item.Key + "\": \"" + item.Value + "\",";
-        }
-        jsonString = jsonString.Remove(jsonString.Length - 1);
-        jsonString += "}";
+        string jsonString = JsonConvert.SerializeObject(data);
         var bytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
 
-        UnityWebRequest uwr = new UnityWebRequest(targetUrl + title + ".json", "POST");
+        //UnityWebRequest uwr = new UnityWebRequest(targetUrl + title + ".json", "POST"); // FIREBASE .json
+        UnityWebRequest uwr = new UnityWebRequest(targetUrl + title, "POST");
         uwr.uploadHandler = (UploadHandler)new UploadHandlerRaw(bytes);
         uwr.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
         uwr.SetRequestHeader("Content-Type", "application/json");
@@ -70,11 +60,38 @@ public class HttpService : MonoBehaviour
             result = uwr.downloadHandler.text;
     }
 
-    public void Get(string title) => StartCoroutine(GetCorutine(title));
-    private IEnumerator GetCorutine(string title)
+    public void Patch(string title, Dictionary<string, object> data) => StartCoroutine(PatchCorutine(title, data));
+    private IEnumerator PatchCorutine(string title, Dictionary<string, object> data)
     {
+        string jsonString = JsonConvert.SerializeObject(data);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
+
+        UnityWebRequest uwr = new UnityWebRequest(targetUrl + title, "PATCH");
+        uwr.uploadHandler = (UploadHandler)new UploadHandlerRaw(bytes);
+        uwr.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        uwr.SetRequestHeader("Content-Type", "application/json");
+        uwr.SetRequestHeader("cache-control", "no-cache");
+        
+        yield return uwr.SendWebRequest();
+
+        if (uwr.result == UnityWebRequest.Result.ConnectionError || uwr.result == UnityWebRequest.Result.ProtocolError)
+            result = uwr.error;
+        else
+            result = uwr.downloadHandler.text;
+    }
+
+    public void Get(string title, Dictionary<string, string> queryParams) => StartCoroutine(GetCorutine(title, queryParams));
+    private IEnumerator GetCorutine(string title, Dictionary<string, string> queryParams)
+    {
+        WebClient webClient = new WebClient();
+        string url = targetUrl + title + "?";
+        foreach (var item in queryParams)
+        {
+            url += item.Key + '=' + item.Value + '&';
+        }
+        url = url.Remove(url.Length - 1);
         result = "";
-        using (UnityWebRequest uwr = UnityWebRequest.Get(targetUrl + title + ".json"))
+        using (UnityWebRequest uwr = UnityWebRequest.Get(url))
         {
             yield return uwr.SendWebRequest();
             if (uwr.result == UnityWebRequest.Result.ConnectionError || uwr.result == UnityWebRequest.Result.ProtocolError)

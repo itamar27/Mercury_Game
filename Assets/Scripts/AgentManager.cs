@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class AgentManager : MonoBehaviourPun
@@ -23,9 +24,10 @@ public class AgentManager : MonoBehaviourPun
     [Tooltip("The local player instance. Use this to know if the local player is represented in the Scene")]
     public static GameObject LocalPlayerInstance;
     public static PlayerManager LocalPlayerManager;
-    public static CluesManager cluesManager;
+    public CluesManager cluesManager;
 
     public string playerName;
+    public int appearanceId;
 
     #endregion
 
@@ -83,8 +85,11 @@ public class AgentManager : MonoBehaviourPun
 
         StartCoroutine(InitTargets());
         currTargetIndex = 0;
-    }
 
+        appearanceId = Globals.GameConfig.botAppearId1;
+        animator.runtimeAnimatorController = PlayerAppearanceManager.GetAnimatorController(appearanceId);
+    }
+    
     private void FixedUpdate()
     {
         if (Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Day)
@@ -127,12 +132,38 @@ public class AgentManager : MonoBehaviourPun
         string from = PlayerManager.LocalPlayerManager.playerName;
         this.photonView.RPC("ChatMessage", RpcTarget.All, from, clue.GetHistory(), this.playerName, clue.GetMessage());
         Chat.Instance.SendMessageToChat(string.Format("<color=blue>To " + this.playerName + ":</color> " + clue.GetMessage()));
+
+        var dict = new Dictionary<string, object>();
+        dict.Add("research", Globals.GameConfig.researchId);
+        dict.Add("source", from);
+        dict.Add("target", this.playerName);
+        dict.Add("score", "0");
+        dict.Add("message", clue.GetMessage());
+        dict.Add("round", Com.Mercury.Game.GameManager.Instance.round.ToString());
+        HttpService.Instance.Post("game/interaction/", dict);
     }
 
     private void SendAgentMessage(Clue clue)
     {
         string from = this.playerName;
-        this.photonView.RPC("ChatMessage", RpcTarget.All, from, clue.GetHistory(), targets[currTargetIndex].playerName, clue.GetMessage());
+        string to = targets[currTargetIndex].playerName;
+        this.photonView.RPC("ChatMessage", RpcTarget.All, from, clue.GetHistory(), to, clue.GetMessage());
+        try
+        {
+            var dict = new Dictionary<string, object>();
+            dict.Add("research", Globals.GameConfig.researchId);
+            dict.Add("source", from);
+            dict.Add("target", to);
+            dict.Add("score", clue.GetScore().ToString());
+            dict.Add("message", clue.GetMessage());
+            dict.Add("round", Com.Mercury.Game.GameManager.Instance.round.ToString());
+            HttpService.Instance.Post("game/interaction/", dict);
+        }
+        catch
+        {
+            Debug.Log("Could not send bot message to platform");
+            Debug.Log(HttpService.Instance.result);
+        }
     }
 
     #endregion
@@ -168,7 +199,7 @@ public class AgentManager : MonoBehaviourPun
 
     public void onMessageClicked(int clueIndex) // Need to be caught from event
     {
-        SendMessage(PlayerManager.cluesManager.GetClueAt(clueIndex));
+        SendMessage(PlayerManager.LocalPlayerManager.cluesManager.GetClueAt(clueIndex));
         messagesBox.SetActive(false);
     }
 
@@ -250,52 +281,32 @@ public class AgentManager : MonoBehaviourPun
 
     private void GetName()
     {
-        int cutPhotonId = photonView.ViewID;
-        if (cutPhotonId > 99)
+        if (Globals.gameRound == 1)
         {
-            while (cutPhotonId > 99)
-                cutPhotonId /= 10;
-        }
-
-        int idToName = cutPhotonId;
-        string prepareForConvert;
-        if (idToName > 9)
-        {
-            prepareForConvert = "" + (idToName % 10) + (idToName / 10);
+            playerName = Com.Mercury.Game.GameManager.Instance.GeneratePlayerName();
+            txtName.text = playerName;
+            Globals.LocalPlayerInfo.name = playerName;
         }
         else
         {
-            prepareForConvert = "" + idToName;
+            playerName = Globals.LocalPlayerInfo.name;
+            txtName.text = playerName;
         }
-
-        int toConvert = int.Parse(prepareForConvert);
-        toConvert += 64;
-
-        int counter = 0;
-        while (toConvert > 90)
-        {
-            toConvert -= 26;
-            counter++;
-        }
-
-        if (counter == 0)
-        {
-            playerName = "Bot " + System.Convert.ToChar(toConvert);
-        }
-        else
-        {
-            playerName = "Bot " + System.Convert.ToChar(64 + counter) + System.Convert.ToChar(toConvert - 26);
-        }
-        txtName.text = playerName;
     }
 
+    [System.Obsolete]
     private void OnMouseDown()
     {
+        if (EventSystem.current.IsPointerOverGameObject())
+        {
+            return;
+        }
+
         if (messagesBox.active)
             messagesBox.SetActive(false);
         else if (currTargetIndex >= 0 && currTargetIndex < targets.Count && Vector3.Distance(transform.position, targets[currTargetIndex].transform.position) < 2f)
         {
-            messagesBox.GetComponent<MessageBoxManager>().UpdateClues(cluesManager.GetAllClues());
+            messagesBox.GetComponent<MessageBoxManager>().UpdateClues(PlayerManager.LocalPlayerManager.cluesManager.GetAllClues());
             messagesBox.SetActive(true);
         }
     }    

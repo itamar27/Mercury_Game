@@ -65,5 +65,14 @@ public class VoteBar : MonoBehaviour
         PlayerManager.LocalPlayerManager.onVoteClicked(playerName);
     }
 
+    public void OnVenomClick()
+    {
+        voteCount++;
+        votesCountText.text = "Votes: " + voteCount;
+        this.GetComponentInParent<VotesPanelManager>().DisableAll();
+        //Inform Other Venoms
+        PlayerManager.LocalPlayerManager.onVenomVoteClicked(playerName);
+    }
+
     #endregion
 }
