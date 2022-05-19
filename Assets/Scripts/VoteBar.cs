@@ -47,7 +47,7 @@ public class VoteBar : MonoBehaviour
     public void SetName(string playerName)
     {
         this.playerName = playerName;
-        barText.text = "Player " + playerName;
+        barText.text = playerName;
     }
 
     public void AddVote()

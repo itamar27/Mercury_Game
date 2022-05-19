@@ -19,6 +19,7 @@ namespace Com.Mercury.Game
 
         [SerializeField] public Text actAndRoundText;
         [SerializeField] public Text roleText;
+        [SerializeField] public Text nameText;
         [SerializeField] public Text winText;
 
         [SerializeField] public GameObject chatPanel;
@@ -99,8 +100,13 @@ namespace Com.Mercury.Game
             instance = this;
             gameAct = Globals.GameAct.Day;
             round = 1;
-            CustomeValue = new ExitGames.Client.Photon.Hashtable();
-            PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
+            if (PhotonNetwork.CurrentRoom.CustomProperties == null)
+                CustomeValue = new ExitGames.Client.Photon.Hashtable();
+            else
+                CustomeValue = PhotonNetwork.CurrentRoom.CustomProperties;
+
+            if (PhotonNetwork.IsMasterClient)
+                PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
         }
 
         private void Start()
@@ -112,14 +118,21 @@ namespace Com.Mercury.Game
             deathCanvas.enabled = false;
             winCanvas.enabled = false;
 
-
             isDead = false;
 
             if (PhotonNetwork.IsMasterClient)
             {
-                PhotonNetwork.InstantiateRoomObject("Agent", new Vector3(0, 0, -1.1f), Quaternion.identity, 0);
-                //PhotonNetwork.InstantiateRoomObject("Agent", new Vector3(0, 0, -1.1f), Quaternion.identity, 0);
-                //PhotonNetwork.InstantiateRoomObject("Agent", new Vector3(0, 0, -1.1f), Quaternion.identity, 0);
+                switch (Globals.gameRound)
+                {
+                    case 1:
+                        break;
+                    case 2:
+                        PhotonNetwork.InstantiateRoomObject("Agent", new Vector3(0, 0, -1.1f), Quaternion.identity, 0);
+                        break;
+                    case 3:
+                        PhotonNetwork.InstantiateRoomObject("Agent", new Vector3(0, 0, -1.1f), Quaternion.identity, 0);
+                        break;
+                }
             }
             if (playerPrefab == null)
             {
@@ -129,15 +142,6 @@ namespace Com.Mercury.Game
             {
                 if (PlayerManager.LocalPlayerInstance == null)
                 {
-                    switch (Globals.gameRound)
-                    {
-                        case 1:
-                            break;
-                        case 2:
-                            break;
-                        case 3:
-                            break;
-                    }
                     // we're in a room. spawn a character for the local player. it gets synced by using PhotonNetwork.Instantiate
                     PhotonNetwork.Instantiate(this.playerPrefab.name, new Vector3(0f, 0f, -1f), Quaternion.identity, 0);
                     Debug.Log("Local Player Instantiate");
@@ -149,7 +153,7 @@ namespace Com.Mercury.Game
             }
 
             roleText.text = "Role: " + Globals.LocalPlayerInfo.role;
-
+            nameText.text = "Name: " + Globals.playersNames[PlayerManager.LocalPlayerManager.photonView.Owner.ActorNumber];
             Chat.Instance.SendMessageToChat(string.Format("<color=green>Mercury:</color> Welcome to Mercury, please enjoy this time to chat with everyone."));
 
             Globals.Results.gamePhase = Globals.GamePhase.OnGoing;
@@ -194,28 +198,14 @@ namespace Com.Mercury.Game
         {
             venomVotePanelManager.AddVote(name);
         }
-
-        public string GeneratePlayerName()
-        {
-            int random = Random.Range(0, Globals.names.Count);
-            string name = Globals.names[random];
-            CustomeValue = PhotonNetwork.CurrentRoom.CustomProperties;
-            while (CustomeValue[name] != null)
-            {
-                random = Random.Range(0, Globals.names.Count);
-                name = Globals.names[random];
-            }
-            CustomeValue.Add(name, name);
-            PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
-            return name;
-        }
-
+        
         #endregion
 
         #region Private Methods
 
         private IEnumerator UpdatePlayerData()
         {
+            /*
             Dictionary<string, object> playerData = new Dictionary<string, object>();
 
             if (Globals.gameRound == 1)
@@ -239,6 +229,8 @@ namespace Com.Mercury.Game
             HttpService.Instance.Patch("game/player/" + Globals.PlayerProfile.id + "/update/", playerData);
             yield return new WaitUntil(() => HttpService.Instance.result != "");
             var parsed = HttpService.Instance.GetParsedResult();
+            */
+            yield return new WaitForSeconds(0);
         }
 
         void LoadLevel()
@@ -267,7 +259,8 @@ namespace Com.Mercury.Game
                 PhotonNetwork.Destroy(agentView);
             }
 
-            yield return new WaitForSeconds(10);
+            yield return new WaitForSeconds(3);
+            PhotonNetwork.AutomaticallySyncScene = true;
             if (Globals.gameRound < 3)
                 PhotonNetwork.LoadLevel("WaitingRoom");
             else

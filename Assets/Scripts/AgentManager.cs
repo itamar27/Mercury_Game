@@ -71,13 +71,13 @@ public class AgentManager : MonoBehaviourPun
         int randomWaitSecAtStart = Random.Range(0, 5);
         lastMessageTime = 5f + randomWaitSecAtStart;
         getNewTarget = true;
+
+        GetName();
     }
 
     private void Start()
     {
         messageCoolDown = 5f;
-
-        GetName();
 
         localXScale = transform.localScale.x;
 
@@ -89,7 +89,7 @@ public class AgentManager : MonoBehaviourPun
         appearanceId = Globals.GameConfig.botAppearId1;
         animator.runtimeAnimatorController = PlayerAppearanceManager.GetAnimatorController(appearanceId);
     }
-    
+
     private void FixedUpdate()
     {
         if (Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Day)
@@ -137,7 +137,7 @@ public class AgentManager : MonoBehaviourPun
         dict.Add("research", Globals.GameConfig.researchId);
         dict.Add("source", from);
         dict.Add("target", this.playerName);
-        dict.Add("score", "0");
+        dict.Add("score", clue.GetScore().ToString());
         dict.Add("message", clue.GetMessage());
         dict.Add("round", Com.Mercury.Game.GameManager.Instance.round.ToString());
         HttpService.Instance.Post("game/interaction/", dict);
@@ -177,7 +177,7 @@ public class AgentManager : MonoBehaviourPun
         {
             cluesManager.AddMessage(message, histrory, to);
         }
-        if(to == PlayerManager.LocalPlayerManager.playerName)
+        if (to == PlayerManager.LocalPlayerManager.playerName)
         {
             Chat.Instance.SendMessageToChat(string.Format("<color=red>" + from + ":</color> " + message));
         }
@@ -186,7 +186,7 @@ public class AgentManager : MonoBehaviourPun
     [PunRPC]
     void NewTarget(int newTargetIndex, string name)
     {
-        if(name == playerName)
+        if (name == playerName)
         {
             currTargetIndex = newTargetIndex;
             getNewTarget = false;
@@ -232,17 +232,25 @@ public class AgentManager : MonoBehaviourPun
             currTargetIndex = Random.Range(0, targets.Count);
             this.photonView.RPC("NewTarget", RpcTarget.Others, currTargetIndex, playerName);
         }
-        else if((lastMessageTime + messageCoolDown < Time.time) && (currTargetIndex >= 0) && (currTargetIndex < targets.Count) && (Vector3.Distance(transform.position, targets[currTargetIndex].transform.position) > 1.5f))
+        else if ((lastMessageTime + messageCoolDown < Time.time) && (currTargetIndex >= 0) && (currTargetIndex < targets.Count) && (Vector3.Distance(transform.position, targets[currTargetIndex].transform.position) > 1.5f))
         {
             Vector2 target = new Vector2(targets[currTargetIndex].transform.position.x, targets[currTargetIndex].transform.position.y);
             transform.position = Vector2.MoveTowards(transform.position, target, speed * Time.deltaTime);
             animator.SetFloat("Speed", 1);
         }
-        else if((lastMessageTime + messageCoolDown < Time.time) && (currTargetIndex >= 0) && (currTargetIndex < targets.Count))
+        else if ((lastMessageTime + messageCoolDown < Time.time) && (currTargetIndex >= 0) && (currTargetIndex < targets.Count))
         {
             animator.SetFloat("Speed", 0);
             List<Clue> clues = cluesManager.GetAllClues();
-            int random = Random.Range(0, clues.Count);
+            int random;
+            if (Globals.GameConfig.agentsBehaviour == Globals.AgentBehaviour.SubOptimal)
+            {
+                random = Random.Range(0, clues.Count);
+            }
+            else
+            {
+                random = Random.Range(1, clues.Count);
+            }
             SendAgentMessage(clues[random]);
             lastMessageTime = Time.time;
             getNewTarget = true;
@@ -262,7 +270,7 @@ public class AgentManager : MonoBehaviourPun
             transform.localScale = new Vector3(localXScale, transform.localScale.y, transform.localScale.z);
         }
     }
-    
+
     private void nameDirection()
     {
         if (transform.localScale.x < 0)
@@ -281,17 +289,30 @@ public class AgentManager : MonoBehaviourPun
 
     private void GetName()
     {
-        if (Globals.gameRound == 1)
+        //playerName = "BOT";
+        //txtName.text = playerName;
+
+        var bots = GameObject.FindGameObjectsWithTag("Agent");
+        List<int> viewIds = new List<int>();
+        foreach(var bot in bots)
         {
-            playerName = Com.Mercury.Game.GameManager.Instance.GeneratePlayerName();
-            txtName.text = playerName;
-            Globals.LocalPlayerInfo.name = playerName;
+            viewIds.Add(bot.GetComponent<PhotonView>().ViewID);
         }
-        else
-        {
-            playerName = Globals.LocalPlayerInfo.name;
-            txtName.text = playerName;
-        }
+        viewIds.Sort();
+        int viewIdIndex = viewIds.IndexOf(photonView.ViewID);
+        if (viewIdIndex == 0)
+            playerName = Globals.GameConfig.botNameId1;
+        else if (viewIdIndex == 1)
+            playerName = Globals.GameConfig.botNameId2;
+        else if (viewIdIndex == 2)
+            playerName = Globals.GameConfig.botNameId3;
+
+        txtName.text = playerName;
+    }
+
+    private void GetAppearance()
+    {
+
     }
 
     [System.Obsolete]
@@ -309,7 +330,7 @@ public class AgentManager : MonoBehaviourPun
             messagesBox.GetComponent<MessageBoxManager>().UpdateClues(PlayerManager.LocalPlayerManager.cluesManager.GetAllClues());
             messagesBox.SetActive(true);
         }
-    }    
+    }
 
     #endregion
 }

@@ -13,6 +13,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
 
     [SerializeField] private Text playerCountText;
     [SerializeField] private Text timeLeftText;
+    [SerializeField] private Text botIncludedText;
     [SerializeField] private Canvas loadingCanvas;
     [SerializeField] private Canvas waitingRoomCanvas;
 
@@ -35,11 +36,18 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
         Globals.gameRound++;
         PhotonNetwork.AutomaticallySyncScene = true;
         readyToLoadScene = true;
+
         CustomeValue = new ExitGames.Client.Photon.Hashtable();
+
         if (PhotonNetwork.IsMasterClient)
         {
-            startTime = PhotonNetwork.Time + 20;
-            CustomeValue.Add("StartTime", startTime);
+            startTime = PhotonNetwork.Time + 10;
+
+            if (CustomeValue.ContainsKey("StartTime"))
+                CustomeValue["StartTime"] = startTime;
+            else
+                CustomeValue.Add("StartTime", startTime);
+
             PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
         }
     }
@@ -48,13 +56,22 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
     {
         loadingCanvas.enabled = false;
 
+        if (Globals.gameRound == 3)
+            botIncludedText.text = "This round you will play with Smart Agents";
+        else
+            botIncludedText.text = "";
+
         if (PhotonNetwork.IsMasterClient == false)
             startTime = double.Parse(PhotonNetwork.CurrentRoom.CustomProperties["StartTime"].ToString());
     }
 
     private void Update()
     {
+        if (PhotonNetwork.IsMasterClient == false)
+            startTime = double.Parse(PhotonNetwork.CurrentRoom.CustomProperties["StartTime"].ToString());
+
         timeLeft = startTime - PhotonNetwork.Time;
+
         if (timeLeft <= 0)
         {
             if (readyToLoadScene == true)
@@ -65,10 +82,19 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
 
                 if (PhotonNetwork.IsMasterClient)
                 {
+                    foreach (var item in PhotonNetwork.CurrentRoom.CustomProperties)
+                    {
+                        Debug.Log("Key: " + item.Key + " | Value: " + item.Value);
+                    }
+
                     PhotonNetwork.CurrentRoom.IsOpen = false;
                     PhotonNetwork.CurrentRoom.IsVisible = false;
-                    PickPlayersAppearance();
                     PickVenoms();
+                    if (Globals.gameRound == 1)
+                    {
+                        PickPlayersAppearance();
+                        PickPlayersNames();
+                    }
                     StartCoroutine(SwitchToGameRoom());
                 }
             }
@@ -76,7 +102,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
             try
             {
                 int localActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
-                
+
                 int venom1 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["Venom1"].ToString());
                 int venom2 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["Venom2"].ToString());
                 int venom3 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["Venom3"].ToString());
@@ -98,6 +124,20 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
 
             try
             {
+                foreach (var player in PhotonNetwork.CurrentRoom.Players)
+                {
+                    string name = PhotonNetwork.CurrentRoom.CustomProperties[player.Value.ActorNumber.ToString()].ToString();
+                    Globals.playersNames.Add(player.Value.ActorNumber, name);
+                }
+
+                Globals.GameConfig.botNameId1 = PhotonNetwork.CurrentRoom.CustomProperties["BotName1"].ToString();
+                Globals.GameConfig.botNameId2 = PhotonNetwork.CurrentRoom.CustomProperties["BotName2"].ToString();
+                Globals.GameConfig.botNameId3 = PhotonNetwork.CurrentRoom.CustomProperties["BotName3"].ToString();
+            }
+            catch { }
+
+            try
+            {
                 int localActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
                 int appearId = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["appear" + localActorNumber].ToString());
                 Globals.LocalPlayerInfo.appearanceId = appearId;
@@ -105,7 +145,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
                 int botAppear1 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["botAppear" + 1].ToString());
                 int botAppear2 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["botAppear" + 2].ToString());
                 int botAppear3 = int.Parse(PhotonNetwork.CurrentRoom.CustomProperties["botAppear" + 3].ToString());
-                
+
                 Globals.GameConfig.botAppearId1 = botAppear1;
                 Globals.GameConfig.botAppearId2 = botAppear2;
                 Globals.GameConfig.botAppearId3 = botAppear3;
@@ -116,7 +156,8 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
 
     private IEnumerator SwitchToGameRoom()
     {
-        yield return new WaitForSeconds(5);
+        yield return new WaitForSeconds(10);
+        PhotonNetwork.CurrentRoom.CustomProperties.Clear();
         PhotonNetwork.AutomaticallySyncScene = true;
         PhotonNetwork.LoadLevel("GameRoomMain");
     }
@@ -125,10 +166,11 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.CurrentRoom == null)
         {
+            Debug.Log("No room in LateUpdate");
             return;
         }
 
-        playerCountText.text = "Players count: " + PhotonNetwork.CurrentRoom.PlayerCount + "/" + Globals.GameConfig.maxPlayers;
+        playerCountText.text = "Players count: " + PhotonNetwork.CurrentRoom.PlayerCount;
         timeLeftText.text = "Starting in: " + (int)timeLeft;
     }
 
@@ -178,6 +220,8 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
                 appearances.RemoveAt(selectedAppear);
             }
         }
+
+        PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
     }
 
     private void PickVenoms()
@@ -186,11 +230,11 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
         int venomsNumber = 0;
         List<int> venomsList = new List<int>();
 
-        if (players.Count > 16)
+        if (players.Count >= 16)
         {
             venomsNumber = 3;
         }
-        else if (players.Count > 8)
+        else if (players.Count >= 8)
         {
             venomsNumber = 2;
         }
@@ -233,6 +277,45 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
         }
 
         PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
+    }
+
+    private void PickPlayersNames()
+    {
+        var players = PhotonNetwork.CurrentRoom.Players;
+        foreach (var player in players)
+        {
+            Globals.playersNames.Add(player.Value.ActorNumber, GeneratePlayerName());
+        }
+
+        Globals.GameConfig.botNameId1 = GeneratePlayerName();
+        Globals.GameConfig.botNameId2 = GeneratePlayerName();
+        Globals.GameConfig.botNameId3 = GeneratePlayerName();
+
+        foreach (var playerName in Globals.playersNames)
+        {
+            CustomeValue.Add(playerName.Key.ToString(), playerName.Value);
+        }
+
+        CustomeValue.Add("BotName1", Globals.GameConfig.botNameId1);
+        CustomeValue.Add("BotName2", Globals.GameConfig.botNameId2);
+        CustomeValue.Add("BotName3", Globals.GameConfig.botNameId3);
+
+        PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
+    }
+
+    private string GeneratePlayerName()
+    {
+        int random = UnityEngine.Random.Range(0, Globals.names.Count);
+        string name = Globals.names[random];
+        CustomeValue = PhotonNetwork.CurrentRoom.CustomProperties;
+        while (CustomeValue.ContainsKey(name))
+        {
+            random = UnityEngine.Random.Range(0, Globals.names.Count);
+            name = Globals.names[random];
+        }
+        CustomeValue.Add(name, name);
+        PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
+        return name;
     }
 
     #endregion

@@ -123,8 +123,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51411544c121a6a4ca360e9ed4a372f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  votePanelManager: {fileID: 0}
-  venomVotePanelManager: {fileID: 0}
   messagesBox: {fileID: 3624342028298741431}
   animator: {fileID: 980008535492865541}
   txtName: {fileID: 1526262169934029159}

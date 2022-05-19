@@ -7,8 +7,8 @@ using UnityEngine.EventSystems;
 public class PlayerManager : MonoBehaviourPun, IComparable
 {
     #region Serialze Fields
-    [SerializeField] VotesPanelManager votePanelManager;
-    [SerializeField] VotesPanelManager venomVotePanelManager;
+    //[SerializeField] VotesPanelManager votePanelManager;
+    //[SerializeField] VotesPanelManager venomVotePanelManager;
 
     [SerializeField] private GameObject messagesBox;
     [SerializeField] private Animator animator;
@@ -21,7 +21,7 @@ public class PlayerManager : MonoBehaviourPun, IComparable
     [Tooltip("The local player instance. Use this to know if the local player is represented in the Scene")]
     public static GameObject LocalPlayerInstance;
     public static PlayerManager LocalPlayerManager;
-   // public static Photon.Realtime.Player LocalPhotonPlayer;
+    // public static Photon.Realtime.Player LocalPhotonPlayer;
     public CluesManager cluesManager;
 
     public string playerName;
@@ -31,6 +31,8 @@ public class PlayerManager : MonoBehaviourPun, IComparable
     #endregion
 
     #region Private Fields
+
+    private ExitGames.Client.Photon.Hashtable CustomeValue;
 
     private CameraBehaviour mainCamera;
 
@@ -76,7 +78,6 @@ public class PlayerManager : MonoBehaviourPun, IComparable
             int appearId = Globals.LocalPlayerInfo.appearanceId;
             animator.runtimeAnimatorController = PlayerAppearanceManager.GetAnimatorController(appearId);
             this.photonView.RPC("OnAnimatorChanged", RpcTarget.All, playerName, appearId);
-
             this.photonView.RPC("UpdateRole", RpcTarget.All, Globals.LocalPlayerInfo.role, playerName);
             this.photonView.RPC("UpdateAppearId", RpcTarget.All, Globals.LocalPlayerInfo.appearanceId, playerName);
         }
@@ -309,57 +310,9 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
     private void GetName()
     {
-        if(Globals.gameRound == 1)
-        {
-            playerName = Com.Mercury.Game.GameManager.Instance.GeneratePlayerName();
-            txtName.text = playerName;
-            Globals.LocalPlayerInfo.name = playerName;
-        } else
-        {
-            playerName = Globals.LocalPlayerInfo.name;
-            txtName.text = playerName;
-        }
-
-        /*
-        int cutPhotonId = photonView.ViewID;
-        if (cutPhotonId > 99)
-        {
-            while (cutPhotonId > 99)
-                cutPhotonId /= 10;
-        }
-
-        int idToName = cutPhotonId;
-        string prepareForConvert;
-        if (idToName > 9)
-        {
-            prepareForConvert = "" + (idToName % 10) + (idToName / 10);
-        }
-        else
-        {
-            prepareForConvert = "" + idToName;
-        }
-
-        int toConvert = int.Parse(prepareForConvert);
-        toConvert += 64;
-
-        int counter = 0;
-        while (toConvert > 90)
-        {
-            toConvert -= 26;
-            counter++;
-        }
-
-        if (counter == 0)
-        {
-            playerName = "" + System.Convert.ToChar(toConvert);
-        }
-        else
-        {
-            playerName = "" + System.Convert.ToChar(64 + counter) + System.Convert.ToChar(toConvert - 26);
-        }
+        playerName = Globals.playersNames[photonView.Owner.ActorNumber];
         txtName.text = playerName;
         Globals.LocalPlayerInfo.name = playerName;
-        */
     }
 
     [Obsolete]

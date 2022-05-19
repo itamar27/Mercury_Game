@@ -18,6 +18,9 @@ public static class Globals
         public static int botAppearId1;
         public static int botAppearId2;
         public static int botAppearId3;
+        public static string botNameId1;
+        public static string botNameId2;
+        public static string botNameId3;
     }
 
     public static class PlayerProfile
@@ -43,7 +46,7 @@ public static class Globals
 
     public enum AgentBehaviour
     {
-        Idle, SemiActive, Active, VeryActive
+        Optimal=1, SubOptimal
     }
 
     public enum GameAct
@@ -55,6 +58,8 @@ public static class Globals
     {
         OnGoing, VenomWin, CitizenWin
     }
+
+    public static Dictionary<int, string> playersNames = new Dictionary<int, string>();
 
     public static List<string> names = new List<string>(new string[]{
 "Aaren"
