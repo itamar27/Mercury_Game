@@ -42,20 +42,25 @@ public class GameTimer : MonoBehaviourPunCallbacks
     private void Awake()
     {
         dayTime = 10;
-        voteTime = 30;
+        voteTime = 10;
         nightTime = 10;
+
         CustomeValue = new ExitGames.Client.Photon.Hashtable();
 
         if (PhotonNetwork.IsMasterClient)
         {
             startTime = PhotonNetwork.Time + dayTime;
-            CustomeValue.Add("StartTime", startTime);
+            if (CustomeValue.ContainsKey("StartTime"))
+                CustomeValue["StartTime"] = startTime;
+            else
+                CustomeValue.Add("StartTime", startTime);
+
             CustomeValue.Add("NextAct", false);
-            PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
+            bool propertiesAreSet = PhotonNetwork.CurrentRoom.SetCustomProperties(CustomeValue);
         }
     }
 
-void Start()
+    void Start()
     {
         if (PhotonNetwork.IsMasterClient == false)
         {
@@ -94,7 +99,7 @@ void Start()
                     CustomeValue["StartTime"] = startTime;
                 }
 
-                if(CustomeValue.ContainsKey("NextAct") == false)
+                if (CustomeValue.ContainsKey("NextAct") == false)
                 {
                     CustomeValue.Add("NextAct", true);
                 }
@@ -165,5 +170,4 @@ void Start()
 
     #endregion
 
-    
 }

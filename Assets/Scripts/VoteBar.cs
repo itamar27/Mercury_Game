@@ -47,7 +47,7 @@ public class VoteBar : MonoBehaviour
     public void SetName(string playerName)
     {
         this.playerName = playerName;
-        barText.text = "Player " + playerName;
+        barText.text = playerName;
     }
 
     public void AddVote()
@@ -63,6 +63,15 @@ public class VoteBar : MonoBehaviour
 
         this.GetComponentInParent<VotesPanelManager>().DisableAll();
         PlayerManager.LocalPlayerManager.onVoteClicked(playerName);
+    }
+
+    public void OnVenomClick()
+    {
+        voteCount++;
+        votesCountText.text = "Votes: " + voteCount;
+        this.GetComponentInParent<VotesPanelManager>().DisableAll();
+        //Inform Other Venoms
+        PlayerManager.LocalPlayerManager.onVenomVoteClicked(playerName);
     }
 
     #endregion

@@ -18,33 +18,15 @@ public class VotesPanelManager : MonoBehaviour
 
     #endregion
 
-    #region Singleton
-
-    private static VotesPanelManager instance;
-    public static VotesPanelManager Instance
-    {
-        get
-        {
-            if (instance == null)
-                instance = new VotesPanelManager();
-
-            return instance;
-        }
-    }
-
-    #endregion
-
     #region MonoBehaviour
 
     private void Awake()
     {
         bars = new Dictionary<string, GameObject>();
         barsScript = new Dictionary<string, VoteBar>();
-        instance = this;
     }
 
     #endregion
-
 
     #region Public Methods
 
@@ -85,7 +67,7 @@ public class VotesPanelManager : MonoBehaviour
     {
         barsScript[playerName].AddVote();
     }
-    /*
+
     public string MostVoted()
     {
         int maxVotes = -1;
@@ -105,9 +87,9 @@ public class VotesPanelManager : MonoBehaviour
             }
         }
 
-
+        int selectedPlayer = UnityEngine.Random.Range(0, names.Count);
+        return names[selectedPlayer];
     }
-    */
 
     #endregion
 

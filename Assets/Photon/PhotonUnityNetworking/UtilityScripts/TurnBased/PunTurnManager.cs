@@ -7,7 +7,7 @@
 // </summary>
 // <author>developer@exitgames.com</author>
 // ----------------------------------------------------------------------------
-
+/*
 using System;
 using System.Collections.Generic;
 
@@ -134,7 +134,7 @@ namespace Photon.Pun.UtilityScripts
         #region MonoBehaviour CallBack
 
 
-        void Start(){}
+        void Start(){
 
         void Update()
         {
@@ -427,4 +427,4 @@ namespace Photon.Pun.UtilityScripts
             room.SetCustomProperties(finishedTurnProp);
         }
     }
-}
+}*/

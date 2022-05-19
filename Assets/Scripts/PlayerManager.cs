@@ -2,10 +2,13 @@ using Photon.Pun;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class PlayerManager : MonoBehaviourPun, IComparable
 {
     #region Serialze Fields
+    //[SerializeField] VotesPanelManager votePanelManager;
+    //[SerializeField] VotesPanelManager venomVotePanelManager;
 
     [SerializeField] private GameObject messagesBox;
     [SerializeField] private Animator animator;
@@ -18,13 +21,18 @@ public class PlayerManager : MonoBehaviourPun, IComparable
     [Tooltip("The local player instance. Use this to know if the local player is represented in the Scene")]
     public static GameObject LocalPlayerInstance;
     public static PlayerManager LocalPlayerManager;
-    public static CluesManager cluesManager;
+    // public static Photon.Realtime.Player LocalPhotonPlayer;
+    public CluesManager cluesManager;
 
     public string playerName;
+    public string playerRole;
+    public int appearanceId;
 
     #endregion
 
     #region Private Fields
+
+    private ExitGames.Client.Photon.Hashtable CustomeValue;
 
     private CameraBehaviour mainCamera;
 
@@ -46,25 +54,33 @@ public class PlayerManager : MonoBehaviourPun, IComparable
         {
             PlayerManager.LocalPlayerInstance = this.gameObject;
             PlayerManager.LocalPlayerManager = this.GetComponent<PlayerManager>();
-            PlayerManager.cluesManager = new CluesManager();
+            PlayerManager.LocalPlayerManager.cluesManager = new CluesManager();
+            //PlayerManager.LocalPhotonPlayer = PhotonNetwork.LocalPlayer;
         }
         // we flag as don't destroy on load so that instance survives level synchronization, thus giving a seamless experience when levels load.
         DontDestroyOnLoad(this.gameObject);
 
         rigidbody2d = GetComponent<Rigidbody2D>();
+
+        GetName();
     }
 
     private void Start()
     {
-        //JoinedRoomEvent();
-        
-        GetName();
-
         localXScale = transform.localScale.x;
 
         mainCamera = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<CameraBehaviour>();
 
         messagesBox.SetActive(false);
+
+        if (photonView.IsMine)
+        {
+            int appearId = Globals.LocalPlayerInfo.appearanceId;
+            animator.runtimeAnimatorController = PlayerAppearanceManager.GetAnimatorController(appearId);
+            this.photonView.RPC("OnAnimatorChanged", RpcTarget.All, playerName, appearId);
+            this.photonView.RPC("UpdateRole", RpcTarget.All, Globals.LocalPlayerInfo.role, playerName);
+            this.photonView.RPC("UpdateAppearId", RpcTarget.All, Globals.LocalPlayerInfo.appearanceId, playerName);
+        }
     }
 
     void Update()
@@ -78,15 +94,14 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
     private void FixedUpdate()
     {
+        nameDirection();
+        messageBoxDirection();
 
         if (photonView.IsMine == false && PhotonNetwork.IsConnected == true)
             return;
 
-        if(Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Day)
+        if (Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Day)
         {
-            nameDirection();
-            messageBoxDirection();
-
             Move(x * Time.deltaTime, y * Time.deltaTime);
         }
         else if (Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Vote)
@@ -95,7 +110,7 @@ public class PlayerManager : MonoBehaviourPun, IComparable
         }
         else
         {
-            if(Globals.LocalPlayerInfo.role == "Venom")
+            if (Globals.LocalPlayerInfo.role == "Venom")
             {
                 // Venoms night
             }
@@ -116,12 +131,14 @@ public class PlayerManager : MonoBehaviourPun, IComparable
         this.photonView.RPC("ChatMessage", RpcTarget.Others, from, clue.GetHistory(), this.playerName, clue.GetMessage());
         Chat.Instance.SendMessageToChat(string.Format("<color=blue>To " + this.playerName + ":</color> " + clue.GetMessage()));
 
-        var dict = new Dictionary<string, string>();
+        var dict = new Dictionary<string, object>();
+        dict.Add("research", Globals.GameConfig.researchId);
         dict.Add("source", from);
         dict.Add("target", this.playerName);
-        dict.Add("score", "0");
+        dict.Add("score", clue.GetScore().ToString());
         dict.Add("message", clue.GetMessage());
-        HttpService.Instance.Post("/api/research/interaction", dict);
+        dict.Add("round", Com.Mercury.Game.GameManager.Instance.round.ToString());
+        HttpService.Instance.Post("game/interaction/", dict);
     }
 
     #endregion
@@ -129,35 +146,115 @@ public class PlayerManager : MonoBehaviourPun, IComparable
     #region Pun Callbacks
 
     [PunRPC]
-    void ChatMessage(string from, string histrory, string to, string message) 
-    { 
-        if(to == LocalPlayerManager.playerName)
+    void ChatMessage(string from, string histrory, string to, string message)
+    {
+        if (to == LocalPlayerManager.playerName)
         {
             Chat.Instance.SendMessageToChat(string.Format("<color=red>" + from + ":</color> " + message));
 
-            PlayerManager.cluesManager.AddMessage(message, histrory, to);
+            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(message, histrory, to);
         }
     }
 
     [PunRPC]
     void OnPlayerVoted(string votedTo)
     {
-        VotesPanelManager.Instance.AddVote(votedTo);
+        Com.Mercury.Game.GameManager.Instance.AddToVotePanel(votedTo);
     }
 
+    [PunRPC]
+    void UpdateRole(string role, string name)
+    {
+        if (name == playerName)
+        {
+            playerRole = role;
+        }
+    }
+
+    [PunRPC]
+    void UpdateAppearId(int appearId, string name)
+    {
+        if (name == playerName)
+        {
+            appearanceId = appearId;
+        }
+    }
+
+    [PunRPC]
+    void UpdateCommon(int clueId, string name)
+    {
+        if (playerName == name)
+        {
+            PlayerManager.LocalPlayerManager.cluesManager.ClearAllClues();
+            CluesFactory cluesFactory = new CluesFactory();
+            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(cluesFactory.GetClueById(clueId), "", "");
+        }
+    }
+
+    [PunRPC]
+    void UpdatePrivate(int clueId, string name)
+    {
+        if (playerName == name && photonView.IsMine)
+        {
+            CluesFactory cluesFactory = new CluesFactory();
+            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(cluesFactory.GetClueById(clueId), "", playerName);
+        }
+    }
+
+    [PunRPC]
+    void OnVenomVoted(string votedTo)
+    {
+        if (LocalPlayerManager.playerRole == "Venom")
+            Com.Mercury.Game.GameManager.Instance.AddToVenomVotePanel(votedTo);
+    }
+
+    [PunRPC]
+    void OnAnimatorChanged(string name, int id)
+    {
+        if (name == playerName)
+        {
+            animator.runtimeAnimatorController = PlayerAppearanceManager.GetAnimatorController(id);
+        }
+    }
+
+    [PunRPC]
+    void OnPlayerEliminated(string name, int id)
+    {
+        Com.Mercury.Game.GameManager.Instance.EliminatePlayer(name, id);
+    }
     #endregion
 
     #region Public Methods
 
+    public void UpdateCommonClue(int clueId)
+    {
+        this.photonView.RPC("UpdateCommon", RpcTarget.All, clueId, playerName);
+    }
+
+    public void UpdatePrivateClue(int clueId)
+    {
+        this.photonView.RPC("UpdatePrivate", RpcTarget.All, clueId, playerName);
+    }
+
     public void onMessageClicked(int clueIndex)
     {
-        SendMessage(PlayerManager.cluesManager.GetClueAt(clueIndex));
+        SendMessage(PlayerManager.LocalPlayerManager.cluesManager.GetClueAt(clueIndex));
         messagesBox.SetActive(false);
     }
 
     public void onVoteClicked(string playerName)
     {
         this.photonView.RPC("OnPlayerVoted", RpcTarget.Others, playerName);
+    }
+
+    public void onVenomVoteClicked(string playerName)
+    {
+        this.photonView.RPC("OnVenomVoted", RpcTarget.Others, playerName);
+    }
+
+    public void onPlayerEliminated(string playerName, int apearId)
+    {
+        this.photonView.RPC("OnPlayerEliminated", RpcTarget.All, playerName, apearId);
     }
 
     public int CompareTo(object obj)
@@ -213,55 +310,26 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
     private void GetName()
     {
-        int cutPhotonId = photonView.ViewID;
-        if (cutPhotonId > 99)
-        {
-            while (cutPhotonId > 99)
-                cutPhotonId /= 10;
-        }
-
-        int idToName = cutPhotonId;
-        string prepareForConvert;
-        if (idToName > 9)
-        {
-            prepareForConvert = "" + (idToName % 10) + (idToName / 10);
-        }
-        else
-        {
-            prepareForConvert = "" + idToName;
-        }
-
-        int toConvert = int.Parse(prepareForConvert);
-        toConvert += 64;
-
-        int counter = 0;
-        while(toConvert > 90)
-        {
-            toConvert -= 26;
-            counter++;
-        }
-
-        if (counter == 0)
-        {
-            playerName = "" + System.Convert.ToChar(toConvert);
-        }
-        else
-        {
-            playerName = "" + System.Convert.ToChar(64 + counter) + System.Convert.ToChar(toConvert - 26);
-        }
+        playerName = Globals.playersNames[photonView.Owner.ActorNumber];
         txtName.text = playerName;
         Globals.LocalPlayerInfo.name = playerName;
     }
 
+    [Obsolete]
     private void OnMouseDown()
     {
+        if (EventSystem.current.IsPointerOverGameObject())
+        {
+            return;
+        }
+
         if (photonView.IsMine == false && PhotonNetwork.IsConnected == true)
         {
-            if(messagesBox.active)
+            if (messagesBox.active)
                 messagesBox.SetActive(false);
             else if (Vector3.Distance(transform.position, LocalPlayerInstance.transform.position) < 2f)
             {
-                messagesBox.GetComponent<MessageBoxManager>().UpdateClues(PlayerManager.cluesManager.GetAllClues());
+                messagesBox.GetComponent<MessageBoxManager>().UpdateClues(PlayerManager.LocalPlayerManager.cluesManager.GetAllClues());
                 messagesBox.SetActive(true);
             }
         }

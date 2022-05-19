@@ -15,7 +15,7 @@ public class MessageBoxManager : MonoBehaviour
             return;
 
         int i = 0;
-        for(i=1; i<4; i++)
+        for(; i<4; i++)
         {
             if(i<clues.Count)
             {

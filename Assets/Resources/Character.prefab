@@ -127,6 +127,8 @@ MonoBehaviour:
   animator: {fileID: 980008535492865541}
   txtName: {fileID: 1526262169934029159}
   playerName: 
+  playerRole: 
+  appearanceId: 0
 --- !u!50 &1892050345
 Rigidbody2D:
   serializedVersion: 4
@@ -232,9 +234,6 @@ MonoBehaviour:
   - Type: 1
     SynchronizeType: 1
     Name: Speed
-  - Type: 4
-    SynchronizeType: 1
-    Name: isDead
   m_SynchronizeLayers:
   - SynchronizeType: 0
     LayerIndex: 0
@@ -263,7 +262,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1733862956708370175}
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: -0.016, y: -0.005, z: 0}
+  m_LocalPosition: {x: -0.04, y: 0, z: 0}
   m_LocalScale: {x: 3.1903987, y: 4.872409, z: 7.663786}
   m_Children: []
   m_Father: {fileID: 3602892642391645037}
@@ -390,7 +389,7 @@ Transform:
   m_GameObject: {fileID: 6322369800763622417}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.6306483, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 3602892642391645037}
   m_RootOrder: 1
@@ -484,8 +483,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6601149511383145203}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0, y: -3.93, z: 1.1}
-  m_LocalScale: {x: 0.3264225, y: 0.3264225, z: 0.1304838}
+  m_LocalPosition: {x: 0.013, y: -3.756, z: 1.1}
+  m_LocalScale: {x: 0.6306483, y: 0.3264225, z: 0.1304838}
   m_Children:
   - {fileID: 3551943577730735933}
   - {fileID: 3188184555763342975}
@@ -593,6 +592,14 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 980008535492865543}
     m_Modifications:
+    - target: {fileID: 520334563754906837, guid: f2442b6bbc05bb24abfdeeed1ced4ed0, type: 3}
+      propertyPath: m_FontSize
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 2910190858752044095, guid: f2442b6bbc05bb24abfdeeed1ced4ed0, type: 3}
+      propertyPath: m_FontSize
+      value: 12
+      objectReference: {fileID: 0}
     - target: {fileID: 4641137443555069440, guid: f2442b6bbc05bb24abfdeeed1ced4ed0, type: 3}
       propertyPath: m_Name
       value: MessagesBox
@@ -640,6 +647,14 @@ PrefabInstance:
     - target: {fileID: 5461827224833814174, guid: f2442b6bbc05bb24abfdeeed1ced4ed0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5525339378544706209, guid: f2442b6bbc05bb24abfdeeed1ced4ed0, type: 3}
+      propertyPath: m_FontSize
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 6352759465108869280, guid: f2442b6bbc05bb24abfdeeed1ced4ed0, type: 3}
+      propertyPath: m_FontSize
+      value: 12
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 2451782195131900623, guid: f2442b6bbc05bb24abfdeeed1ced4ed0, type: 3}

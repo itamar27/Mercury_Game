@@ -6322,5 +6322,9 @@ PrefabInstance:
       propertyPath: m_Name
       value: ExitGameButton
       objectReference: {fileID: 0}
+    - target: {fileID: 3651224142264351291, guid: d7af427c11b4e3f4eb65f9664a4d4c0d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d7af427c11b4e3f4eb65f9664a4d4c0d, type: 3}
