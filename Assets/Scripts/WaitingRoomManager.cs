@@ -11,6 +11,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
 {
     #region Serialized Fields
 
+    [SerializeField] private Text roundNumberText;
     [SerializeField] private Text playerCountText;
     [SerializeField] private Text timeLeftText;
     [SerializeField] private Text botIncludedText;
@@ -41,7 +42,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
 
         if (PhotonNetwork.IsMasterClient)
         {
-            startTime = PhotonNetwork.Time + 10;
+            startTime = PhotonNetwork.Time + 30;
 
             if (CustomeValue.ContainsKey("StartTime"))
                 CustomeValue["StartTime"] = startTime;
@@ -54,6 +55,7 @@ public class WaitingRoomManager : MonoBehaviourPunCallbacks
 
     void Start()
     {
+        roundNumberText.text = "Round: " + Globals.gameRound;
         loadingCanvas.enabled = false;
 
         if (Globals.gameRound == 3)

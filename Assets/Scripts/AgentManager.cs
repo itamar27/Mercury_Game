@@ -127,6 +127,17 @@ public class AgentManager : MonoBehaviourPun
 
     #region Pun Methods
 
+    public void UpdateCommonClue(int clueId)
+    {
+        this.photonView.RPC("UpdateCommon", RpcTarget.All, clueId, playerName);
+    }
+
+    public void UpdatePrivateClue(int clueId)
+    {
+        this.photonView.RPC("UpdatePrivate", RpcTarget.All, clueId, playerName);
+    }
+
+
     private void SendMessage(Clue clue)
     {
         string from = PlayerManager.LocalPlayerManager.playerName;
@@ -139,7 +150,7 @@ public class AgentManager : MonoBehaviourPun
         dict.Add("target", this.playerName);
         dict.Add("score", clue.GetScore().ToString());
         dict.Add("message", clue.GetMessage());
-        dict.Add("round", Com.Mercury.Game.GameManager.Instance.round.ToString());
+        dict.Add("round", Globals.gameRound);
         HttpService.Instance.Post("game/interaction/", dict);
     }
 
@@ -156,7 +167,7 @@ public class AgentManager : MonoBehaviourPun
             dict.Add("target", to);
             dict.Add("score", clue.GetScore().ToString());
             dict.Add("message", clue.GetMessage());
-            dict.Add("round", Com.Mercury.Game.GameManager.Instance.round.ToString());
+            dict.Add("round", Globals.gameRound);
             HttpService.Instance.Post("game/interaction/", dict);
         }
         catch
@@ -171,15 +182,39 @@ public class AgentManager : MonoBehaviourPun
     #region Pun Callbacks
 
     [PunRPC]
+    void UpdateCommon(int clueId, string name)
+    {
+        if (playerName == name)
+        {
+            cluesManager.ClearAllClues();
+            cluesManager.InitClues(playerName);
+            CluesFactory cluesFactory = new CluesFactory();
+            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(cluesFactory.GetClueById(clueId), "", playerName, 1);
+        }
+    }
+
+    [PunRPC]
+    void UpdatePrivate(int clueId, string name)
+    {
+        if (playerName == name)
+        {
+            CluesFactory cluesFactory = new CluesFactory();
+            cluesManager.AddMessage(cluesFactory.GetClueById(clueId), "", playerName, 2);
+        }
+    }
+
+
+
+    [PunRPC]
     void ChatMessage(string from, string histrory, string to, string message)
     {
         if (to == this.playerName)
         {
-            cluesManager.AddMessage(message, histrory, to);
+            cluesManager.AddMessage(message, histrory, to, 2);
         }
         if (to == PlayerManager.LocalPlayerManager.playerName)
         {
-            Chat.Instance.SendMessageToChat(string.Format("<color=red>" + from + ":</color> " + message));
+            Chat.Instance.SendMessageToChat(string.Format("<color=red>From " + from + ":</color> " + message));
         }
     }
 
@@ -243,14 +278,12 @@ public class AgentManager : MonoBehaviourPun
             animator.SetFloat("Speed", 0);
             List<Clue> clues = cluesManager.GetAllClues();
             int random;
-            if (Globals.GameConfig.agentsBehaviour == Globals.AgentBehaviour.SubOptimal)
-            {
+
+            if (Globals.GameConfig.agentsBehaviour == Globals.AgentBehaviour.SubOptimal || clues.Count < 4)
                 random = Random.Range(0, clues.Count);
-            }
             else
-            {
-                random = Random.Range(1, clues.Count);
-            }
+                random = Random.Range(3, clues.Count);
+
             SendAgentMessage(clues[random]);
             lastMessageTime = Time.time;
             getNewTarget = true;
@@ -289,12 +322,9 @@ public class AgentManager : MonoBehaviourPun
 
     private void GetName()
     {
-        //playerName = "BOT";
-        //txtName.text = playerName;
-
         var bots = GameObject.FindGameObjectsWithTag("Agent");
         List<int> viewIds = new List<int>();
-        foreach(var bot in bots)
+        foreach (var bot in bots)
         {
             viewIds.Add(bot.GetComponent<PhotonView>().ViewID);
         }
@@ -310,10 +340,6 @@ public class AgentManager : MonoBehaviourPun
         txtName.text = playerName;
     }
 
-    private void GetAppearance()
-    {
-
-    }
 
     [System.Obsolete]
     private void OnMouseDown()
@@ -322,13 +348,12 @@ public class AgentManager : MonoBehaviourPun
         {
             return;
         }
-
-        if (messagesBox.active)
-            messagesBox.SetActive(false);
-        else if (currTargetIndex >= 0 && currTargetIndex < targets.Count && Vector3.Distance(transform.position, targets[currTargetIndex].transform.position) < 2f)
+        if (currTargetIndex >= 0 && currTargetIndex < targets.Count && Vector3.Distance(transform.position, targets[currTargetIndex].transform.position) < 2f)
         {
-            messagesBox.GetComponent<MessageBoxManager>().UpdateClues(PlayerManager.LocalPlayerManager.cluesManager.GetAllClues());
-            messagesBox.SetActive(true);
+            Com.Mercury.Game.GameManager.Instance.messageBoxCanvas.enabled = true;
+            MessagesManager.Instance.gameObject.SetActive(false);
+            MessagesManager.Instance.gameObject.SetActive(true);
+            MessagesManager.Instance.UpdateName(playerName);
         }
     }
 

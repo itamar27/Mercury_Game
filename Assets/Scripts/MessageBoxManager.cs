@@ -9,6 +9,8 @@ public class MessageBoxManager : MonoBehaviour
     [SerializeField] public List<TextMesh> messagesText;
     private List<Clue> clues;
 
+
+
     private void OnEnable()
     {
         if (clues == null)

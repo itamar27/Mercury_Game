@@ -125,19 +125,35 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
     #region Pun Methods
 
-    private void SendMessage(Clue clue)
+    /*    private void SendMessage(Clue clue)
+        {
+            string from = PlayerManager.LocalPlayerManager.playerName;
+            this.photonView.RPC("ChatMessage", RpcTarget.Others, from, clue.GetHistory(), this.playerName, clue.GetMessage());
+            Chat.Instance.SendMessageToChat(string.Format("<color=blue>To " + this.playerName + ":</color> " + clue.GetMessage()));
+
+            var dict = new Dictionary<string, object>();
+            dict.Add("research", Globals.GameConfig.researchId);
+            dict.Add("source", from);
+            dict.Add("target", this.playerName);
+            dict.Add("score", clue.GetScore().ToString());
+            dict.Add("message", clue.GetMessage());
+            dict.Add("round", Globals.gameRound);
+            HttpService.Instance.Post("game/interaction/", dict);
+        }
+    */
+    public void SendMessageToPlayer(Clue clue, string target)
     {
         string from = PlayerManager.LocalPlayerManager.playerName;
-        this.photonView.RPC("ChatMessage", RpcTarget.Others, from, clue.GetHistory(), this.playerName, clue.GetMessage());
-        Chat.Instance.SendMessageToChat(string.Format("<color=blue>To " + this.playerName + ":</color> " + clue.GetMessage()));
+        this.photonView.RPC("ChatMessage", RpcTarget.Others, from, clue.GetHistory(), target, clue.GetMessage());
+        Chat.Instance.SendMessageToChat(string.Format("<color=blue>To " + target + ":</color> " + clue.GetMessage()));
 
         var dict = new Dictionary<string, object>();
         dict.Add("research", Globals.GameConfig.researchId);
         dict.Add("source", from);
-        dict.Add("target", this.playerName);
+        dict.Add("target", target);
         dict.Add("score", clue.GetScore().ToString());
         dict.Add("message", clue.GetMessage());
-        dict.Add("round", Com.Mercury.Game.GameManager.Instance.round.ToString());
+        dict.Add("round", Globals.gameRound);
         HttpService.Instance.Post("game/interaction/", dict);
     }
 
@@ -150,9 +166,9 @@ public class PlayerManager : MonoBehaviourPun, IComparable
     {
         if (to == LocalPlayerManager.playerName)
         {
-            Chat.Instance.SendMessageToChat(string.Format("<color=red>" + from + ":</color> " + message));
+            Chat.Instance.SendMessageToChat(string.Format("<color=red>From " + from + ":</color> " + message));
 
-            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(message, histrory, to);
+            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(message, histrory, to, 2, true);
         }
     }
 
@@ -186,8 +202,11 @@ public class PlayerManager : MonoBehaviourPun, IComparable
         if (playerName == name)
         {
             PlayerManager.LocalPlayerManager.cluesManager.ClearAllClues();
+            PlayerManager.LocalPlayerManager.cluesManager.InitClues(PlayerManager.LocalPlayerManager.playerName);
             CluesFactory cluesFactory = new CluesFactory();
-            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(cluesFactory.GetClueById(clueId), "", "");
+            string clueMessage = cluesFactory.GetClueById(clueId);
+            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(clueMessage, "", PlayerManager.LocalPlayerManager.playerName, 1);
+            CluesPanel.Instance.AddClue(clueMessage);
         }
     }
 
@@ -197,7 +216,10 @@ public class PlayerManager : MonoBehaviourPun, IComparable
         if (playerName == name && photonView.IsMine)
         {
             CluesFactory cluesFactory = new CluesFactory();
-            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(cluesFactory.GetClueById(clueId), "", playerName);
+            string clueMessage = cluesFactory.GetClueById(clueId);
+            PlayerManager.LocalPlayerManager.cluesManager.AddMessage(clueMessage, "", playerName, 2);
+            CluesPanel.Instance.AddClue(clueMessage);
+            StartCoroutine(Com.Mercury.Game.GameManager.Instance.UpdateClueToBE(cluesFactory.GetClueById(clueId), 2));
         }
     }
 
@@ -238,7 +260,7 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
     public void onMessageClicked(int clueIndex)
     {
-        SendMessage(PlayerManager.LocalPlayerManager.cluesManager.GetClueAt(clueIndex));
+        //SendMessage(PlayerManager.LocalPlayerManager.cluesManager.GetClueAt(clueIndex));
         messagesBox.SetActive(false);
     }
 
@@ -325,12 +347,12 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
         if (photonView.IsMine == false && PhotonNetwork.IsConnected == true)
         {
-            if (messagesBox.active)
-                messagesBox.SetActive(false);
-            else if (Vector3.Distance(transform.position, LocalPlayerInstance.transform.position) < 2f)
+            if (Vector3.Distance(transform.position, LocalPlayerInstance.transform.position) < 2f)
             {
-                messagesBox.GetComponent<MessageBoxManager>().UpdateClues(PlayerManager.LocalPlayerManager.cluesManager.GetAllClues());
-                messagesBox.SetActive(true);
+                Com.Mercury.Game.GameManager.Instance.messageBoxCanvas.enabled = true;
+                MessagesManager.Instance.gameObject.SetActive(false);
+                MessagesManager.Instance.gameObject.SetActive(true);
+                MessagesManager.Instance.UpdateName(playerName);
             }
         }
     }
