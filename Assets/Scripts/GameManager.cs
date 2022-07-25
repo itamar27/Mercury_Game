@@ -30,10 +30,14 @@ namespace Com.Mercury.Game
         [SerializeField] public Canvas eliminationCanvas;
         [SerializeField] public Canvas venomNightCanvas;
         [SerializeField] public Canvas citizenNightCanvas;
+        [SerializeField] public Canvas messageBoxCanvas;
+        [SerializeField] public Canvas playerDetailsCanvas;
+        [SerializeField] public Canvas firstKillCanvas;
 
         [SerializeField] public VotesPanelManager votePanelManager;
         [SerializeField] public VotesPanelManager venomVotePanelManager;
         [SerializeField] public EliminationScript eliminationScript;
+        [SerializeField] public DeathScreen deathScreenScript;
 
         #endregion
 
@@ -53,6 +57,8 @@ namespace Com.Mercury.Game
         #region Private Fields
 
         private ExitGames.Client.Photon.Hashtable CustomeValue;
+
+        private bool firstKill;
 
         #endregion
 
@@ -100,6 +106,8 @@ namespace Com.Mercury.Game
             instance = this;
             gameAct = Globals.GameAct.Day;
             round = 1;
+            firstKill = true;
+
             if (PhotonNetwork.CurrentRoom.CustomProperties == null)
                 CustomeValue = new ExitGames.Client.Photon.Hashtable();
             else
@@ -117,6 +125,8 @@ namespace Com.Mercury.Game
             eliminationCanvas.enabled = false;
             deathCanvas.enabled = false;
             winCanvas.enabled = false;
+            messageBoxCanvas.enabled = false;
+            firstKillCanvas.enabled = false;
 
             isDead = false;
 
@@ -144,30 +154,25 @@ namespace Com.Mercury.Game
                 {
                     // we're in a room. spawn a character for the local player. it gets synced by using PhotonNetwork.Instantiate
                     PhotonNetwork.Instantiate(this.playerPrefab.name, new Vector3(0f, 0f, -1f), Quaternion.identity, 0);
-                    Debug.Log("Local Player Instantiate");
-                }
-                else
-                {
-                    Debug.LogFormat("Ignoring scene load for {0}", SceneManagerHelper.ActiveSceneName);
                 }
             }
 
             roleText.text = "Role: " + Globals.LocalPlayerInfo.role;
             nameText.text = "Name: " + Globals.playersNames[PlayerManager.LocalPlayerManager.photonView.Owner.ActorNumber];
-            Chat.Instance.SendMessageToChat(string.Format("<color=green>Mercury:</color> Welcome to Mercury, please enjoy this time to chat with everyone."));
+            Chat.Instance.SendMessageToChat(string.Format("<b><color=green>Mercury:</color> Welcome to Mercury, please enjoy this time to chat with everyone.</b>"));
 
             Globals.Results.gamePhase = Globals.GamePhase.OnGoing;
 
             StartCoroutine(UpdatePlayerData());
+            StartCoroutine(ClosePlayerDetailsCanvas());
         }
 
         #endregion
 
         #region Photon Callbacks
 
-        public override void OnLeftRoom()
-        {
-        }
+        //Override normal behaviour to do nothing instead
+        public override void OnLeftRoom() { }
 
         public override void OnPlayerEnteredRoom(Player other)
         {
@@ -198,14 +203,38 @@ namespace Com.Mercury.Game
         {
             venomVotePanelManager.AddVote(name);
         }
-        
+
+        public IEnumerator UpdateClueToBE(string message, int score)
+        {
+            Dictionary<string, object> clueData = new Dictionary<string, object>();
+
+            clueData.Add("message", message);
+            clueData.Add("round", Globals.gameRound);
+            clueData.Add("type", score);
+
+            HttpService.Instance.result = "";
+            if (score == 2)
+                clueData.Add("participant", Globals.PlayerProfile.id);
+            else
+                clueData.Add("research", Globals.GameConfig.researchId);
+            HttpService.Instance.Post("game/clue/", clueData);
+
+            yield return new WaitUntil(() => HttpService.Instance.result != "");
+            var parsed = HttpService.Instance.GetParsedResult();
+        }
+
         #endregion
 
         #region Private Methods
 
+        private IEnumerator ClosePlayerDetailsCanvas()
+        {
+            yield return new WaitForSeconds(10);
+            playerDetailsCanvas.enabled = false;
+        }
+
         private IEnumerator UpdatePlayerData()
         {
-            /*
             Dictionary<string, object> playerData = new Dictionary<string, object>();
 
             if (Globals.gameRound == 1)
@@ -229,7 +258,6 @@ namespace Com.Mercury.Game
             HttpService.Instance.Patch("game/player/" + Globals.PlayerProfile.id + "/update/", playerData);
             yield return new WaitUntil(() => HttpService.Instance.result != "");
             var parsed = HttpService.Instance.GetParsedResult();
-            */
             yield return new WaitForSeconds(0);
         }
 
@@ -385,7 +413,7 @@ namespace Com.Mercury.Game
             }
         }
 
-        void CheckForPlayerElimination(string mostVoted)
+        private void CheckForPlayerElimination(string mostVoted)
         {
             var players = GameObject.FindGameObjectsWithTag("Player");
             int playerAppear = -1;
@@ -417,7 +445,7 @@ namespace Com.Mercury.Game
 
         public void EliminatePlayer(string mostVoted, int playerAppear)
         {
-            eliminationScript.UpdateCanvas(mostVoted, playerAppear);
+            eliminationScript.UpdateCanvas(mostVoted, playerAppear, true);
 
             PhotonView toDestroy = null;
             var players = GameObject.FindGameObjectsWithTag("Player");
@@ -454,10 +482,12 @@ namespace Com.Mercury.Game
                 {
                     PhotonNetwork.SetMasterClient(potentialMaster);
                 }
+
                 PhotonNetwork.Destroy(toDestroy);
 
                 isDead = true;
                 deathCanvas.enabled = true;
+                deathScreenScript.UpdateDeathText(true);
             }
             else if (PhotonNetwork.IsMasterClient)
             {
@@ -476,6 +506,8 @@ namespace Com.Mercury.Game
             venomNightCanvas.enabled = false;
             citizenNightCanvas.enabled = false;
             councilCanvas.enabled = false;
+            messageBoxCanvas.enabled = false;
+
             chatPanel.SetActive(false);
 
             if (round > 1)
@@ -488,6 +520,13 @@ namespace Com.Mercury.Game
             eliminationCanvas.enabled = true;
             yield return new WaitForSeconds(5);
             eliminationCanvas.enabled = false;
+            if (firstKill == true)
+            {
+                firstKill = false;
+                firstKillCanvas.enabled = true;
+                yield return new WaitForSeconds(15);
+                firstKillCanvas.enabled = false;
+            }
 
             if (CheckWinCondition())
             {
@@ -518,15 +557,18 @@ namespace Com.Mercury.Game
             venomNightCanvas.enabled = false;
             citizenNightCanvas.enabled = false;
             councilCanvas.enabled = false;
+            eliminationCanvas.enabled = false;
 
             actAndRoundText.text = "Day " + round;
-            Chat.Instance.SendMessageToChat(string.Format("<color=green>Mercury:</color> It's a new day, enjoy it."));
+            Chat.Instance.SendMessageToChat(string.Format("<b><color=green>Mercury:</color> It's a new day, enjoy it.</b>"));
         }
 
         private void VoteRutine()
         {
             chatPanel.SetActive(false);
             venomNightCanvas.enabled = false;
+            messageBoxCanvas.enabled = false;
+            eliminationCanvas.enabled = false;
             citizenNightCanvas.enabled = false;
             if (isDead == true)
                 return;
@@ -538,7 +580,6 @@ namespace Com.Mercury.Game
                 citizenNightCanvas.enabled = false;
                 councilCanvas.enabled = false;
                 chatPanel.SetActive(false);
-                eliminationCanvas.enabled = false;
 
                 if (isDead == false)
                 {
@@ -552,7 +593,7 @@ namespace Com.Mercury.Game
                         citizenNightCanvas.enabled = true;
                     }
                     actAndRoundText.text = "Night  " + round;
-                    Chat.Instance.SendMessageToChat(string.Format("<color=green>Mercury:</color> Good night."));
+                    Chat.Instance.SendMessageToChat(string.Format("<b><color=green>Mercury:</color> Good night.</b>"));
                 }
                 return;
             }
@@ -561,7 +602,7 @@ namespace Com.Mercury.Game
             InitVotePanel();
 
             actAndRoundText.text = "Council  " + round;
-            Chat.Instance.SendMessageToChat(string.Format("<color=green>Mercury:</color> It's time for the Mercury council meeting."));
+            Chat.Instance.SendMessageToChat(string.Format("<b><color=green>Mercury:</color> It's time for the Mercury council meeting.</b>"));
 
         }
 
@@ -570,6 +611,8 @@ namespace Com.Mercury.Game
             venomNightCanvas.enabled = false;
             citizenNightCanvas.enabled = false;
             councilCanvas.enabled = false;
+            messageBoxCanvas.enabled = false;
+
             chatPanel.SetActive(false);
 
             eliminationCanvas.enabled = true;
@@ -609,7 +652,7 @@ namespace Com.Mercury.Game
                     }
                 }
             }
-            eliminationScript.UpdateCanvas(mostVoted, playerAppear);
+            eliminationScript.UpdateCanvas(mostVoted, playerAppear, false);
 
             if (mostVoted == PlayerManager.LocalPlayerManager.playerName)
             {
@@ -617,6 +660,7 @@ namespace Com.Mercury.Game
 
                 isDead = true;
                 deathCanvas.enabled = true;
+                deathScreenScript.UpdateDeathText(false);
             }
             else if (PhotonNetwork.IsMasterClient)
             {
@@ -665,7 +709,7 @@ namespace Com.Mercury.Game
                     citizenNightCanvas.enabled = true;
 
                 actAndRoundText.text = "Night  " + round;
-                Chat.Instance.SendMessageToChat(string.Format("<color=green>Mercury:</color> Good night."));
+                Chat.Instance.SendMessageToChat(string.Format("<b><color=green>Mercury:</color> Good night.</b>"));
             }
         }
 
@@ -711,6 +755,19 @@ namespace Com.Mercury.Game
                 int hiddenClue = allVenomsClues[randomHiddenClueIndex];
                 playerScript.UpdatePrivateClue(hiddenClue);
             }
+
+            var agents = GameObject.FindGameObjectsWithTag("Agent");
+            foreach (var agent in agents)
+            {
+                AgentManager agentScript = agent.GetComponent<AgentManager>();
+                agentScript.UpdateCommonClue(commonClue);
+                int randomHiddenClueIndex = UnityEngine.Random.Range(0, allVenomsClues.Count);
+                int hiddenClue = allVenomsClues[randomHiddenClueIndex];
+                agentScript.UpdatePrivateClue(hiddenClue);
+            }
+
+            CluesFactory cluesFactory = new CluesFactory();
+            StartCoroutine(UpdateClueToBE(cluesFactory.GetClueById(commonClue), 1));
         }
 
         private bool CheckWinCondition()

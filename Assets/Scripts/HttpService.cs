@@ -9,8 +9,8 @@ using UnityEngine.Networking;
 
 public class HttpService : MonoBehaviour
 {
-    //protected string targetUrl = "https://mercury-48cab-default-rtdb.europe-west1.firebasedatabase.app/";
-    protected string targetUrl = "http://localhost:8000/api/";
+    protected string targetUrl = "https://mercury-be-network.herokuapp.com/api/";
+    //protected string targetUrl = "http://localhost:8000/api/";
     public string result = "";
 
     #region Singleton
@@ -45,7 +45,6 @@ public class HttpService : MonoBehaviour
         string jsonString = JsonConvert.SerializeObject(data);
         var bytes = System.Text.Encoding.UTF8.GetBytes(jsonString);
 
-        //UnityWebRequest uwr = new UnityWebRequest(targetUrl + title + ".json", "POST"); // FIREBASE .json
         UnityWebRequest uwr = new UnityWebRequest(targetUrl + title, "POST");
         uwr.uploadHandler = (UploadHandler)new UploadHandlerRaw(bytes);
         uwr.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();

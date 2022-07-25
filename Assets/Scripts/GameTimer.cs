@@ -41,9 +41,9 @@ public class GameTimer : MonoBehaviourPunCallbacks
 
     private void Awake()
     {
-        dayTime = 10;
-        voteTime = 10;
-        nightTime = 10;
+        dayTime = 90;
+        voteTime = 15;
+        nightTime = 15;
 
         CustomeValue = new ExitGames.Client.Photon.Hashtable();
 

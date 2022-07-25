@@ -12,30 +12,32 @@ public class CluesManager
     public CluesManager()
     {
         clues = new List<Clue>();
-        clues.Add(new Clue("Hello", "", ""));
-        clues.Add(new Clue("Have a nice day", "", ""));
+        clues.Add(new Clue("Hello", "", "", 0));
+        clues.Add(new Clue("Have a nice day", "", "", 0));
     }
     #endregion
 
     #region Public Methods
 
-    public void startCluesMechanism(string name, int clueID)
+    public void InitClues(string name)
     {
-        clues.Clear();
-
-        clues.Add(new Clue("I suspect ...", "", name));
-        clues.Add(new Clue("I trust ...", "", name));
+        clues.Add(new Clue("What a hot day", "", name, 0));
+        clues.Add(new Clue("I am feeling tried", "", name, 0));
     }
 
-    public void AddMessage(string message, string history, string name)
+    public void AddMessage(string message, string history, string name, int score, bool addToPanel = false)
     {
-        foreach(Clue clue in clues)
+        foreach (Clue clue in clues)
         {
             if (clue.GetMessage() == message)
                 return;
         }
 
-        clues.Add(new Clue(message, history, name));
+        if (addToPanel)
+            if (score == 1 || score == 2)
+                CluesPanel.Instance.AddClue(message);
+
+        clues.Add(new Clue(message, history, name, score));
     }
 
     public Clue GetClueAt(int index)
@@ -76,13 +78,20 @@ public class Clue : BuiltInMessage
     private string clueType;
     private int score;
 
-    public Clue(string message, string history, string name) : base(message)
+    public Clue(string message, string history, string name, int score) : base(message)
     {
+        this.score = score;
+
+        if (score == 0)
+            clueType = "trivial";
+        else if (score == 1)
+            clueType = "common";
+        else if (score == 2)
+            clueType = "hidden";
+
         if (name == "")
         {
             messageHistory = "";
-            score = 0;
-            clueType = "common";
         }
         else
         {
@@ -90,9 +99,6 @@ public class Clue : BuiltInMessage
                 messageHistory = name;
             else
                 messageHistory = history + "," + name;
-
-            score = 1;
-            clueType = "hidden";
         }
     }
 
@@ -235,7 +241,7 @@ public class AppearancesClues
     {
         CluesFactory cluesFactory = new CluesFactory();
         Dictionary<string, string> properties = new Dictionary<string, string>();
-        foreach(int propertyId in cluesByAppearanceId[id])
+        foreach (int propertyId in cluesByAppearanceId[id])
         {
             KeyValuePair<string, string> property = cluesFactory.GetCluePropertyById(propertyId);
             properties.Add(property.Key, property.Value);

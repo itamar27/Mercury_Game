@@ -43,7 +43,6 @@ public class VotesPanelManager : MonoBehaviour
 
     public void AddBar(string playerName)
     {
-
         GameObject obj = Instantiate(barPrefab, this.transform);
         VoteBar voteBarSc = obj.GetComponent<VoteBar>();
         voteBarSc.SetName(playerName);
@@ -87,12 +86,9 @@ public class VotesPanelManager : MonoBehaviour
             }
         }
 
-        int selectedPlayer = UnityEngine.Random.Range(0, names.Count);
-        return names[selectedPlayer];
+        names.Sort();
+        return names[0];
     }
 
-    #endregion
-
-    #region Private Methods
     #endregion
 }
