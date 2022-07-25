@@ -117,10 +117,6 @@ public class AgentManager : MonoBehaviourPun
                 Move();
             }
         }
-        else if (Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Vote)
-        {
-            //Wait and vote
-        }
     }
 
     #endregion
@@ -232,7 +228,7 @@ public class AgentManager : MonoBehaviourPun
 
     #region Public Methods
 
-    public void onMessageClicked(int clueIndex) // Need to be caught from event
+    public void onMessageClicked(int clueIndex)
     {
         SendMessage(PlayerManager.LocalPlayerManager.cluesManager.GetClueAt(clueIndex));
         messagesBox.SetActive(false);

@@ -55,10 +55,6 @@ public class CluesManager
         clues.Clear();
     }
     #endregion
-
-    #region Private Methods
-
-    #endregion
 }
 
 public class BuiltInMessage
@@ -96,8 +92,6 @@ public class Clue : BuiltInMessage
         if (name == "")
         {
             messageHistory = "";
-            //score = 1;
-            //clueType = "common";
         }
         else
         {
@@ -105,9 +99,6 @@ public class Clue : BuiltInMessage
                 messageHistory = name;
             else
                 messageHistory = history + "," + name;
-
-            //score = 2;
-            //clueType = "hidden";
         }
     }
 

@@ -86,9 +86,4 @@ public class MessagesManager : MonoBehaviour
     }
 
     #endregion
-    
-    #region 
-    #endregion
-
-
 }

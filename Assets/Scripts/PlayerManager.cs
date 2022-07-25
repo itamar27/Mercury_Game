@@ -7,8 +7,6 @@ using UnityEngine.EventSystems;
 public class PlayerManager : MonoBehaviourPun, IComparable
 {
     #region Serialze Fields
-    //[SerializeField] VotesPanelManager votePanelManager;
-    //[SerializeField] VotesPanelManager venomVotePanelManager;
 
     [SerializeField] private GameObject messagesBox;
     [SerializeField] private Animator animator;
@@ -21,7 +19,6 @@ public class PlayerManager : MonoBehaviourPun, IComparable
     [Tooltip("The local player instance. Use this to know if the local player is represented in the Scene")]
     public static GameObject LocalPlayerInstance;
     public static PlayerManager LocalPlayerManager;
-    // public static Photon.Realtime.Player LocalPhotonPlayer;
     public CluesManager cluesManager;
 
     public string playerName;
@@ -49,15 +46,12 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
     private void Awake()
     {
-        // used in GameManager.cs: we keep track of the localPlayer instance to prevent instantiation when levels are synchronized
         if (photonView.IsMine)
         {
             PlayerManager.LocalPlayerInstance = this.gameObject;
             PlayerManager.LocalPlayerManager = this.GetComponent<PlayerManager>();
             PlayerManager.LocalPlayerManager.cluesManager = new CluesManager();
-            //PlayerManager.LocalPhotonPlayer = PhotonNetwork.LocalPlayer;
         }
-        // we flag as don't destroy on load so that instance survives level synchronization, thus giving a seamless experience when levels load.
         DontDestroyOnLoad(this.gameObject);
 
         rigidbody2d = GetComponent<Rigidbody2D>();
@@ -104,43 +98,12 @@ public class PlayerManager : MonoBehaviourPun, IComparable
         {
             Move(x * Time.deltaTime, y * Time.deltaTime);
         }
-        else if (Com.Mercury.Game.GameManager.gameAct == Globals.GameAct.Vote)
-        {
-            // Get Vote
-        }
-        else
-        {
-            if (Globals.LocalPlayerInfo.role == "Venom")
-            {
-                // Venoms night
-            }
-            else
-            {
-                // Citizens night
-            }
-        }
     }
 
     #endregion
 
     #region Pun Methods
 
-    /*    private void SendMessage(Clue clue)
-        {
-            string from = PlayerManager.LocalPlayerManager.playerName;
-            this.photonView.RPC("ChatMessage", RpcTarget.Others, from, clue.GetHistory(), this.playerName, clue.GetMessage());
-            Chat.Instance.SendMessageToChat(string.Format("<color=blue>To " + this.playerName + ":</color> " + clue.GetMessage()));
-
-            var dict = new Dictionary<string, object>();
-            dict.Add("research", Globals.GameConfig.researchId);
-            dict.Add("source", from);
-            dict.Add("target", this.playerName);
-            dict.Add("score", clue.GetScore().ToString());
-            dict.Add("message", clue.GetMessage());
-            dict.Add("round", Globals.gameRound);
-            HttpService.Instance.Post("game/interaction/", dict);
-        }
-    */
     public void SendMessageToPlayer(Clue clue, string target)
     {
         string from = PlayerManager.LocalPlayerManager.playerName;
@@ -260,7 +223,6 @@ public class PlayerManager : MonoBehaviourPun, IComparable
 
     public void onMessageClicked(int clueIndex)
     {
-        //SendMessage(PlayerManager.LocalPlayerManager.cluesManager.GetClueAt(clueIndex));
         messagesBox.SetActive(false);
     }
 

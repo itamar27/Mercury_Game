@@ -17,7 +17,6 @@ public class MessageBox : MonoBehaviour
 
     public void OnBoxClicked()
     {
-        Debug.Log(clue.GetMessage());
         PlayerManager.LocalPlayerManager.SendMessageToPlayer(clue, MessagesManager.Instance.targetName);
         MessagesManager.Instance.CloseWindow();
     }

@@ -91,7 +91,4 @@ public class VotesPanelManager : MonoBehaviour
     }
 
     #endregion
-
-    #region Private Methods
-    #endregion
 }

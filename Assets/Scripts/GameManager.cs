@@ -154,11 +154,6 @@ namespace Com.Mercury.Game
                 {
                     // we're in a room. spawn a character for the local player. it gets synced by using PhotonNetwork.Instantiate
                     PhotonNetwork.Instantiate(this.playerPrefab.name, new Vector3(0f, 0f, -1f), Quaternion.identity, 0);
-                    Debug.Log("Local Player Instantiate");
-                }
-                else
-                {
-                    Debug.LogFormat("Ignoring scene load for {0}", SceneManagerHelper.ActiveSceneName);
                 }
             }
 
@@ -176,9 +171,8 @@ namespace Com.Mercury.Game
 
         #region Photon Callbacks
 
-        public override void OnLeftRoom()
-        {
-        }
+        //Override normal behaviour to do nothing instead
+        public override void OnLeftRoom() { }
 
         public override void OnPlayerEnteredRoom(Player other)
         {
@@ -513,7 +507,7 @@ namespace Com.Mercury.Game
             citizenNightCanvas.enabled = false;
             councilCanvas.enabled = false;
             messageBoxCanvas.enabled = false;
-            
+
             chatPanel.SetActive(false);
 
             if (round > 1)
